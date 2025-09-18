@@ -1,7 +1,7 @@
 {
   "name": "InDrive Profit Calculator",
   "short_name": "InDrive Calc",
-  "start_url": "indrive-calculator.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#4CAF50",
@@ -17,4 +17,5 @@
       "type": "image/png"
     }
   ]
+
 }

@@ -100,7 +100,6 @@
             'coma': ',',
             'common': ',',
             'kama': ',',
-            'coma': ',',
             'kam': ',',
             'come on': ',',
             'come': ',',
@@ -165,18 +164,20 @@
                 if (n) {
                     if (n === 100) {
                         current *= 100;
-                    } else if (n >= 20) {
-                        current += n;
-                    } else if (n >= 10) {
+                        num += current;
+                        current = 0;
+                    } else if (current > 0 && n < current) {
                         current += n;
                     } else {
-                        current += n;
+                        num += current;
+                        current = n;
                     }
                 } else if (word.match(/^\d+$/)) {
-                    current += parseInt(word);
+                    current = parseInt(word);
                 }
             });
-            return current;
+            num += current;
+            return num;
         }
 
         const getTripCategory = (distance) => {
@@ -267,10 +268,10 @@
                 return;
             }
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.lang = 'en-PK';  // Changed to Pakistani English for better accent recognition
+            recognition.lang = 'en-PK';  // Pakistani English
             recognition.onresult = (event) => {
                 let transcript = event.results[0][0].transcript.toLowerCase();
-                console.log('Raw transcript:', transcript);  // Log for debugging
+                console.log('Raw transcript:', transcript);  // For debugging
                 transcript = correctMishears(transcript);
                 const processed = wordsToNumbers(transcript);
                 clipboardInput.value = processed;

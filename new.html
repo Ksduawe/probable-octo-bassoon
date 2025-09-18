@@ -135,6 +135,11 @@
             }, 300);
         };
         
+        // Clear clipboard input on click
+        clipboardInput.addEventListener('click', () => {
+            clipboardInput.value = '';
+        });
+        
         clipboardInput.addEventListener('input', () => {
             const text = clipboardInput.value.toLowerCase().trim();
             // Try simple format: "10,300" or "10 300"

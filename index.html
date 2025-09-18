@@ -135,10 +135,15 @@
             }, 300);
         };
         
+        // Clear clipboard input on click
+        clipboardInput.addEventListener('click', () => {
+            clipboardInput.value = '';
+        });
+        
         clipboardInput.addEventListener('input', () => {
             const text = clipboardInput.value.toLowerCase().trim();
-            // Try simple format: "10,300"
-            const simpleMatch = text.match(/^(\d*\.?\d*)\s*,\s*(\d*\.?\d*)$/);
+            // Try simple format: "10,300" or "10 300"
+            const simpleMatch = text.match(/^(\d*\.?\d*)\s*(?:,|\s)\s*(\d*\.?\d*)$/);
             if (simpleMatch) {
                 distanceInput.value = simpleMatch[1];
                 fareInput.value = simpleMatch[2];

@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InDrive Profit</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 5px; padding: 0; font-size: 10px; line-height: 1.1; }
+        h1 { font-size: 14px; text-align: center; margin: 3px 0; }
+        form { display: grid; gap: 3px; }
+        .row { display: flex; gap: 3px; }
+        .row > div { flex: 1; }
+        .input-group { display: flex; align-items: center; gap: 5px; }
+        label { font-size: 10px; white-space: nowrap; }
+        input { padding: 3px; font-size: 10px; width: 100%; box-sizing: border-box; }
+        #clipboard { width: calc(100% - 30px); }
+        #result { margin-top: 5px; padding: 5px; border: 1px solid #ddd; background-color: #f9f9f9; font-size: 10px; }
+        .profit-positive { color: green; font-weight: bold; }
+        .profit-negative { color: red; font-weight: bold; }
+        .profit-row { display: flex; justify-content: space-between; flex-wrap: wrap; margin-bottom: -10px; }
+        button { padding: 3px; font-size: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>InDrive Profit</h1>
+    <form id="calculatorForm">
+        <div class="input-group">
+            <label for="clipboard">Paste (e.g., "10,300"):</label>
+            <input type="text" id="clipboard" placeholder="Paste distance,fare">
+            <button type="button" id="voiceButton">🎤</button>
+        </div>
+        <div class="row">
+            <div class="input-group">
+                <label for="distance">Distance (km):</label>
+                <input type="number" id="distance" required min="0" step="0.1">
+            </div>
+            <div class="input-group">
+                <label for="fare">Fare (PKR):</label>
+                <input type="number" id="fare" required min="0" step="0.1">
+            </div>
+        </div>
+        <div class="row">
+            <div class="input-group">
+                <label for="commission">Commission (0.12):</label>
+                <input type="number" id="commission" min="0" max="1" step="0.01" value="0.12">
+            </div>
+            <div class="input-group">
+                <label for="fuelPrice">Fuel Price (PKR/L):</label>
+                <input type="number" id="fuelPrice" min="0" step="0.01" value="264.61">
+            </div>
+        </div>
+        <div class="row">
+            <div class="input-group">
+                <label for="efficiency">Efficiency (km/L):</label>
+                <input type="number" id="efficiency" min="0" step="0.1" value="15">
+            </div>
+            <div class="input-group">
+                <label for="maintenance">Maintenance (PKR/km):</label>
+                <input type="number" id="maintenance" min="0" step="0.01" value="3">
+            </div>
+        </div>
+    </form>
+    <div id="result"></div>
+    
+    <script>
+        const form = document.getElementById('calculatorForm');
+        const clipboardInput = document.getElementById('clipboard');
+        const distanceInput = document.getElementById('distance');
+        const fareInput = document.getElementById('fare');
+        const commissionInput = document.getElementById('commission');
+        const fuelPriceInput = document.getElementById('fuelPrice');
+        const efficiencyInput = document.getElementById('efficiency');
+        const maintenanceInput = document.getElementById('maintenance');
+        const resultDiv = document.getElementById('result');
+        const voiceButton = document.getElementById('voiceButton');
+        
+        const corrections = {
+            'ben': 'ten',
+            'then': 'ten',
+            'den': 'ten',
+            'teen': 'three',
+            'tree': 'three',
+            'free': 'three',
+            'for': 'four',
+            'fore': 'four',
+            'fife': 'five',
+            'file': 'five',
+            'sex': 'six',
+            'sicks': 'six',
+            'sever': 'seven',
+            'heaven': 'seven',
+            'ate': 'eight',
+            'aid': 'eight',
+            'mine': 'nine',
+            'line': 'nine',
+            'hero': 'zero',
+            'sear o': 'zero',
+            'comma': ',',
+            'coma': ',',
+            'common': ',',
+            'kama': ',',
+            'coma': ',',
+            'kam': ',',
+            'come on': ',',
+            'come': ',',
+            'point': '.',
+            'dot': '.'
+        };
+
+        const wordToNum = {
+            'zero': 0,
+            'one': 1,
+            'two': 2,
+            'three': 3,
+            'four': 4,
+            'five': 5,
+            'six': 6,
+            'seven': 7,
+            'eight': 8,
+            'nine': 9,
+            'ten': 10,
+            'eleven': 11,
+            'twelve': 12,
+            'thirteen': 13,
+            'fourteen': 14,
+            'fifteen': 15,
+            'sixteen': 16,
+            'seventeen': 17,
+            'eighteen': 18,
+            'nineteen': 19,
+            'twenty': 20,
+            'thirty': 30,
+            'forty': 40,
+            'fifty': 50,
+            'sixty': 60,
+            'seventy': 70,
+            'eighty': 80,
+            'ninety': 90,
+            'hundred': 100
+        };
+
+        function correctMishears(transcript) {
+            Object.keys(corrections).forEach(wrong => {
+                transcript = transcript.replace(new RegExp(wrong, 'gi'), corrections[wrong]);
+            });
+            return transcript;
+        }
+
+        function wordsToNumbers(str) {
+            let parts = str.split(/comma|kama|coma|kam|come on|come|,/i).map(p => p.trim());
+            let distStr = parts[0];
+            let fareStr = parts[1] || '';
+            let dist = parseWords(distStr);
+            let fare = parseWords(fareStr);
+            return `${dist},${fare}`;
+        }
+
+        function parseWords(str) {
+            let words = str.split(/\s+/);
+            let num = 0;
+            let current = 0;
+            words.forEach(word => {
+                let n = wordToNum[word.toLowerCase()];
+                if (n) {
+                    if (n === 100) {
+                        current *= 100;
+                    } else if (n >= 20) {
+                        current += n;
+                    } else if (n >= 10) {
+                        current += n;
+                    } else {
+                        current += n;
+                    }
+                } else if (word.match(/^\d+$/)) {
+                    current += parseInt(word);
+                }
+            });
+            return current;
+        }
+
+        const getTripCategory = (distance) => {
+            if (distance >= 1 && distance <= 5) return { label: 'Ultra-Short Trip', emoji: '🚙' };
+            if (distance >= 6 && distance <= 10) return { label: 'Short Trip', emoji: '🚗' };
+            if (distance >= 11 && distance <= 20) return { label: 'Medium Trip', emoji: '🚐' };
+            if (distance >= 21 && distance <= 30) return { label: 'Long Trip', emoji: '🚚' };
+            if (distance >= 31) return { label: 'Extended Trip', emoji: '🚌' };
+            return { label: 'Unknown', emoji: '' };
+        };
+        
+        let debounceTimeout;
+        const calculateProfit = () => {
+            clearTimeout(debounceTimeout);
+            debounceTimeout = setTimeout(() => {
+                const distance = parseFloat(distanceInput.value);
+                const fare = parseFloat(fareInput.value);
+                const commissionRate = parseFloat(commissionInput.value);
+                const fuelPrice = parseFloat(fuelPriceInput.value);
+                const efficiency = parseFloat(efficiencyInput.value);
+                const maintenancePerKm = parseFloat(maintenanceInput.value);
+                
+                if (isNaN(distance) || isNaN(fare) || distance <= 0 || fare <= 0 || 
+                    isNaN(commissionRate) || isNaN(fuelPrice) || isNaN(efficiency) || 
+                    isNaN(maintenancePerKm) || efficiency <= 0) {
+                    resultDiv.innerHTML = '<p style="color: red;">Valid numbers</p>';
+                    return;
+                }
+                
+                const commission = fare * commissionRate;
+                const netFare = fare - commission;
+                const fuelCostPerKm = fuelPrice / efficiency;
+                const fuelCost = fuelCostPerKm * distance;
+                const maintenanceCost = maintenancePerKm * distance;
+                const totalVariableCosts = fuelCost + maintenanceCost;
+                const profit = netFare - totalVariableCosts;
+                
+                const farePct = 100;
+                const commissionPct = (commission / fare) * 100;
+                const netFarePct = (netFare / fare) * 100;
+                const fuelPct = (fuelCost / fare) * 100;
+                const maintenancePct = (maintenanceCost / fare) * 100;
+                const totalCostsPct = (totalVariableCosts / fare) * 100;
+                const profitPct = (profit / fare) * 100;
+                
+                const trip = getTripCategory(distance);
+                
+                resultDiv.innerHTML = `
+                    <div class="profit-row">
+                        <p class="${profit > 0 ? 'profit-positive' : 'profit-negative'}">Profit: ${profit.toFixed(2)} (${profitPct.toFixed(0)}%) ${profit > 0 ? '✅' : '❌'}</p>
+                        <p>${trip.label} ${trip.emoji} (${distance.toFixed(1)} km)</p>
+                    </div>
+                    <p>Fare: ${fare.toFixed(2)} (${farePct.toFixed(0)}%)</p>
+                    <p>Fuel Cost: ${fuelCost.toFixed(2)} (${fuelPct.toFixed(0)}%)</p>
+                    <p>Commission: ${commission.toFixed(2)} (${commissionPct.toFixed(0)}%)</p>
+                    <p>Net Fare: ${netFare.toFixed(2)} (${netFarePct.toFixed(0)}%)</p>
+                    <p>Maintenance: ${maintenanceCost.toFixed(2)} (${maintenancePct.toFixed(0)}%)</p>
+                    <p>Total Costs: ${totalVariableCosts.toFixed(2)} (${totalCostsPct.toFixed(0)}%)</p>
+                `;
+            }, 300);
+        };
+        
+        clipboardInput.addEventListener('input', () => {
+            const text = clipboardInput.value.toLowerCase().trim();
+            // Try simple format: "10,300"
+            const simpleMatch = text.match(/^(\d*\.?\d*)\s*,\s*(\d*\.?\d*)$/);
+            if (simpleMatch) {
+                distanceInput.value = simpleMatch[1];
+                fareInput.value = simpleMatch[2];
+            } else {
+                // Fallback to verbose format: "Distance: 10 km, Fare: 300 PKR"
+                const distanceMatch = text.match(/distance\D*(\d*\.?\d*)\s*km/i) || text.match(/(\d*\.?\d*)\s*km/i);
+                if (distanceMatch) distanceInput.value = distanceMatch[1];
+                const fareMatch = text.match(/fare\D*(\d*\.?\d*)\s*(pkr|rs|₨)/i) || text.match(/(\d*\.?\d*)\s*(pkr|rs|₨)/i);
+                if (fareMatch) fareInput.value = fareMatch[1];
+            }
+            calculateProfit();
+        });
+        
+        [distanceInput, fareInput, commissionInput, fuelPriceInput, efficiencyInput, maintenanceInput].forEach(input => {
+            input.addEventListener('input', calculateProfit);
+        });
+
+        // Voice Input with Correction and Words-to-Numbers
+        voiceButton.addEventListener('click', () => {
+            if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+                alert('Speech recognition not supported in this browser.');
+                return;
+            }
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'en-PK';  // Changed to Pakistani English for better accent recognition
+            recognition.onresult = (event) => {
+                let transcript = event.results[0][0].transcript.toLowerCase();
+                console.log('Raw transcript:', transcript);  // Log for debugging
+                transcript = correctMishears(transcript);
+                const processed = wordsToNumbers(transcript);
+                clipboardInput.value = processed;
+                clipboardInput.dispatchEvent(new Event('input'));
+            };
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error', event.error);
+                alert('Speech recognition failed. Try again.');
+            };
+            recognition.start();
+        });
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').then(reg => console.log('SW registered', reg)).catch(err => console.error('SW registration failed', err));
+        }
+    </script>
+</body>
+</html>

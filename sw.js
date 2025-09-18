@@ -2,7 +2,7 @@ self.addEventListener('install', e => {
   e.waitUntil(
     caches.open('indrive-calc-v1').then(cache => {
       return cache.addAll([
-        'indrive-calculator.html',
+        'index.html',
         'icon-192.png',
         'icon-512.png'
       ]);

@@ -248,19 +248,20 @@
         
         clipboardInput.addEventListener('input', () => {
             const text = clipboardInput.value.toLowerCase().trim();
-            const simpleMatch = text.match(/^(\d*\.?\d*)\s*,\s*(\d*\.?\d*)$/);
+            // Try simple format: "10,300" or "10 300"
+            const simpleMatch = text.match(/^(\d*\.?\d*)\s*(,|\s)\s*(\d*\.?\d*)$/);
             if (simpleMatch) {
                 distanceInput.value = simpleMatch[1];
-                fareInput.value = simpleMatch[2];
+                fareInput.value = simpleMatch[3];
             } else {
+                // Fallback to verbose format: "Distance: 10 km, Fare: 300 PKR" or "Distance: 10 km Fare: 300 PKR"
                 const distanceMatch = text.match(/distance\D*(\d*\.?\d*)\s*km/i) || text.match(/(\d*\.?\d*)\s*km/i);
                 if (distanceMatch) distanceInput.value = distanceMatch[1];
                 const fareMatch = text.match(/fare\D*(\d*\.?\d*)\s*(pkr|rs|₨)/i) || text.match(/(\d*\.?\d*)\s*(pkr|rs|₨)/i);
                 if (fareMatch) fareInput.value = fareMatch[1];
             }
             calculateProfit();
-        });
-        
+        });        
         [distanceInput, fareInput, commissionInput, fuelPriceInput, efficiencyInput, maintenanceInput].forEach(input => {
             input.addEventListener('input', calculateProfit);
         });

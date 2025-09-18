@@ -75,117 +75,6 @@
         const resultDiv = document.getElementById('result');
         const voiceButton = document.getElementById('voiceButton');
         
-        const corrections = {
-            'ben': 'ten', 'then': 'ten', 'den': 'ten', 'tin': 'ten', 'teen': 'ten', 'bean': 'ten', 'team': 'ten',
-            'tree': 'three', 'free': 'three', 'for': 'four', 'fore': 'four', 'fife': 'five', 'file': 'five',
-            'sex': 'six', 'sicks': 'six', 'sever': 'seven', 'heaven': 'seven', 'ate': 'eight', 'aid': 'eight',
-            'mine': 'nine', 'line': 'nine', 'hero': 'zero', 'sear o': 'zero',
-            'comma': ',', 'coma': ',', 'common': ',', 'kama': ',', 'kam': ',', 'come on': ',', 'come': ',',
-            'point': '.', 'dot': '.',
-            // Additional corrections for complex numbers
-            'hundreds': 'hundred', 'hunded': 'hundred', 'handred': 'hundred',
-            'thirty five': 'thirty-five', 'fifty five': 'fifty-five', 'three fifty five': 'three hundred fifty-five',
-            'three fifty': 'three hundred fifty', 'three hundred and fifty': 'three hundred fifty'
-        };
-
-        const smallNums = {
-            'zero': 0, 'one': 1, 'two': 2, 'three': 3, 'four': 4, 'five': 5, 'six': 6, 'seven': 7, 'eight': 8, 'nine': 9,
-            'ten': 10, 'eleven': 11, 'twelve': 12, 'thirteen': 13, 'fourteen': 14, 'fifteen': 15, 'sixteen': 16,
-            'seventeen': 17, 'eighteen': 18, 'nineteen': 19
-        };
-
-        const tensNums = {
-            'twenty': 20, 'thirty': 30, 'forty': 40, 'fifty': 50, 'sixty': 60, 'seventy': 70, 'eighty': 80, 'ninety': 90,
-            'thirty-five': 35, 'fifty-five': 55
-        };
-
-        const scales = {
-            'hundred': 100, 'thousand': 1000
-        };
-
-        function correctMishears(transcript) {
-            Object.keys(corrections).forEach(wrong => {
-                transcript = transcript.replace(new RegExp(wrong, 'gi'), corrections[wrong]);
-            });
-            return transcript;
-        }
-
-        function wordsToNumbers(str) {
-            console.log('Processing transcript:', str); // Debug
-            str = correctMishears(str);
-            console.log('Corrected transcript:', str); // Debug
-
-            // Split on comma or contextual clues (e.g., "km" for distance, "pkr" for fare)
-            let parts = str.split(/[,]|(km.*pkr)/i).map(p => p.trim()).filter(p => p);
-            if (parts.length === 1) {
-                // If no clear comma, try to split based on number patterns or keywords
-                const words = str.split(/\s+/);
-                let splitIndex = words.findIndex(w => w.match(/pkr|rs|₨/i)) || words.length;
-                parts = [
-                    words.slice(0, splitIndex).join(' '),
-                    words.slice(splitIndex).join(' ').replace(/pkr|rs|₨/i, '')
-                ].map(p => p.trim()).filter(p => p);
-            }
-            console.log('Split parts:', parts); // Debug
-
-            let dist = parseWords(parts[0] || '');
-            let fare = parts[1] ? parseWords(parts[1]) : 0;
-
-            // Validate reasonable ranges
-            if (dist > 100) dist = 0; // Assume invalid distance if too large
-            if (fare > 10000) fare = 0; // Assume invalid fare if too large
-
-            console.log('Parsed distance:', dist, 'fare:', fare); // Debug
-            return `${dist},${fare}`;
-        }
-
-        function parseWords(str) {
-            if (!str) return 0;
-            let words = str.split(/\s+/).filter(w => w);
-            console.log('Parsing words:', words); // Debug
-
-            // Handle direct numeric input
-            if (words.length === 1 && words[0].match(/^\d+\.?\d*$/)) {
-                return parseFloat(words[0]);
-            }
-
-            let total = 0;
-            let group = 0;
-            let i = 0;
-
-            while (i < words.length) {
-                let word = words[i].toLowerCase();
-                let small = smallNums[word];
-                let tens = tensNums[word];
-                let scale = scales[word];
-
-                if (small !== undefined) {
-                    group += small;
-                } else if (tens !== undefined) {
-                    group += tens;
-                } else if (scale !== undefined) {
-                    group *= scale;
-                    total += group;
-                    group = 0;
-                } else if (word.match(/^\d+$/)) {
-                    group += parseInt(word);
-                } else if (word === 'and' || word.match(/km|pkr|rs|₨/i)) {
-                    // Ignore connectors or units
-                } else {
-                    // Check for multi-word numbers (e.g., "three hundred fifty-five")
-                    let nextWords = words.slice(i, i + 3).join(' ').toLowerCase();
-                    if (corrections[nextWords]) {
-                        let corrected = corrections[nextWords].split(' ');
-                        words.splice(i, 3, ...corrected);
-                        continue; // Reprocess the corrected words
-                    }
-                }
-                i++;
-            }
-            total += group;
-            return total;
-        }
-
         const getTripCategory = (distance) => {
             if (distance >= 1 && distance <= 5) return { label: 'Ultra-Short Trip', emoji: '🚙' };
             if (distance >= 6 && distance <= 10) return { label: 'Short Trip', emoji: '🚗' };
@@ -249,36 +138,34 @@
         clipboardInput.addEventListener('input', () => {
             const text = clipboardInput.value.toLowerCase().trim();
             // Try simple format: "10,300" or "10 300"
-            const simpleMatch = text.match(/^(\d*\.?\d*)\s*(,|\s)\s*(\d*\.?\d*)$/);
+            const simpleMatch = text.match(/^(\d*\.?\d*)\s*(?:,|\s)\s*(\d*\.?\d*)$/);
             if (simpleMatch) {
                 distanceInput.value = simpleMatch[1];
-                fareInput.value = simpleMatch[3];
+                fareInput.value = simpleMatch[2];
             } else {
-                // Fallback to verbose format: "Distance: 10 km, Fare: 300 PKR" or "Distance: 10 km Fare: 300 PKR"
+                // Fallback to verbose format: "Distance: 10 km, Fare: 300 PKR"
                 const distanceMatch = text.match(/distance\D*(\d*\.?\d*)\s*km/i) || text.match(/(\d*\.?\d*)\s*km/i);
                 if (distanceMatch) distanceInput.value = distanceMatch[1];
                 const fareMatch = text.match(/fare\D*(\d*\.?\d*)\s*(pkr|rs|₨)/i) || text.match(/(\d*\.?\d*)\s*(pkr|rs|₨)/i);
                 if (fareMatch) fareInput.value = fareMatch[1];
             }
             calculateProfit();
-        });        
+        });
+        
         [distanceInput, fareInput, commissionInput, fuelPriceInput, efficiencyInput, maintenanceInput].forEach(input => {
             input.addEventListener('input', calculateProfit);
         });
 
+        // Voice Input
         voiceButton.addEventListener('click', () => {
             if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
                 alert('Speech recognition not supported in this browser.');
                 return;
             }
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-            recognition.lang = 'en-PK';
+            recognition.lang = 'en-US';
             recognition.onresult = (event) => {
-                let transcript = event.results[0][0].transcript.toLowerCase();
-                console.log('Raw transcript:', transcript);
-                transcript = correctMishears(transcript);
-                const processed = wordsToNumbers(transcript);
-                clipboardInput.value = processed;
+                clipboardInput.value = event.results[0][0].transcript;
                 clipboardInput.dispatchEvent(new Event('input'));
             };
             recognition.onerror = (event) => {
@@ -288,6 +175,7 @@
             recognition.start();
         });
 
+        // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').then(reg => console.log('SW registered', reg)).catch(err => console.error('SW registration failed', err));
         }

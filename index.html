@@ -75,97 +75,6 @@
         const resultDiv = document.getElementById('result');
         const voiceButton = document.getElementById('voiceButton');
         
-        const corrections = {
-            'ben': 'ten',
-            'then': 'ten',
-            'den': 'ten',
-            'tree': 'three',
-            'free': 'three',
-            'for': 'four',
-            'fore': 'four',
-            'fife': 'five',
-            'file': 'five',
-            'sex': 'six',
-            'sicks': 'six',
-            'sever': 'seven',
-            'heaven': 'seven',
-            'ate': 'eight',
-            'aid': 'eight',
-            'mine': 'nine',
-            'line': 'nine',
-            'hero': 'zero',
-            'sear o': 'zero',
-            'comma': ',',
-            'coma': ','
-        };
-
-        const wordToNum = {
-            'zero': 0,
-            'one': 1,
-            'two': 2,
-            'three': 3,
-            'four': 4,
-            'five': 5,
-            'six': 6,
-            'seven': 7,
-            'eight': 8,
-            'nine': 9,
-            'ten': 10,
-            'eleven': 11,
-            'twelve': 12,
-            'thirteen': 13,
-            'fourteen': 14,
-            'fifteen': 15,
-            'sixteen': 16,
-            'seventeen': 17,
-            'eighteen': 18,
-            'nineteen': 19,
-            'twenty': 20,
-            'thirty': 30,
-            'forty': 40,
-            'fifty': 50,
-            'sixty': 60,
-            'seventy': 70,
-            'eighty': 80,
-            'ninety': 90,
-            'hundred': 100
-        };
-
-        function correctMishears(transcript) {
-            Object.keys(corrections).forEach(wrong => {
-                transcript = transcript.replace(new RegExp(wrong, 'gi'), corrections[wrong]);
-            });
-            return transcript;
-        }
-
-        function wordsToNumbers(str) {
-            let parts = str.split(/comma|,/i).map(p => p.trim());
-            let distStr = parts[0];
-            let fareStr = parts[1] || '';
-            let dist = parseWords(distStr);
-            let fare = parseWords(fareStr);
-            return `${dist},${fare}`;
-        }
-
-        function parseWords(str) {
-            let words = str.split(/\s+/);
-            let num = 0;
-            let current = 0;
-            words.forEach(word => {
-                let n = wordToNum[word.toLowerCase()];
-                if (n) {
-                    if (n === 100) {
-                        current *= 100;
-                    } else if (n >= 20) {
-                        current += n;
-                    } else {
-                        current += n;
-                    }
-                }
-            });
-            return current;
-        }
-
         const getTripCategory = (distance) => {
             if (distance >= 1 && distance <= 5) return { label: 'Ultra-Short Trip', emoji: '🚙' };
             if (distance >= 6 && distance <= 10) return { label: 'Short Trip', emoji: '🚗' };
@@ -247,7 +156,7 @@
             input.addEventListener('input', calculateProfit);
         });
 
-        // Voice Input with Correction and Words-to-Numbers
+        // Voice Input
         voiceButton.addEventListener('click', () => {
             if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
                 alert('Speech recognition not supported in this browser.');
@@ -256,10 +165,7 @@
             const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
             recognition.lang = 'en-US';
             recognition.onresult = (event) => {
-                let transcript = event.results[0][0].transcript.toLowerCase();
-                transcript = correctMishears(transcript);
-                const processed = wordsToNumbers(transcript);
-                clipboardInput.value = processed;
+                clipboardInput.value = event.results[0][0].transcript;
                 clipboardInput.dispatchEvent(new Event('input'));
             };
             recognition.onerror = (event) => {

@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Driver Daily Log - Fleet Management</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .log-entry { transition: background-color 0.3s ease; }
+        .log-entry:hover { background-color: #f9fafb; }
+        .details-section {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0.25, 0.8, 0.25, 1), padding 0.5s ease;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .details-section.show {
+            max-height: 600px; /* Adjust as needed */
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+        .step { display: none; }
+        .step.active { display: block; }
+        .progress-bar-fill {
+            transition: width 0.4s ease-in-out;
+        }
+        .tooltip-container {
+            position: relative;
+            display: inline-block;
+        }
+        .tooltip-text {
+            visibility: hidden;
+            width: 220px;
+            background-color: #334155;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip-text::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #334155 transparent transparent transparent;
+        }
+        .tooltip-container:hover .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 max-w-2xl">
+        <header class="text-center mb-6">
+            <h1 class="text-3xl font-bold text-blue-800">Driver Daily Log</h1>
+            <p class="text-gray-600 mt-1">Record your daily numbers in a few simple steps.</p>
+        </header>
+
+        <!-- Main Form for Data Entry -->
+        <main class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+            <!-- Progress Bar -->
+            <div class="mb-6">
+                <div class="bg-gray-200 rounded-full h-2.5">
+                    <div id="progressBar" class="bg-blue-600 h-2.5 rounded-full progress-bar-fill" style="width: 33%"></div>
+                </div>
+                <div class="flex justify-between text-sm text-gray-600 mt-2">
+                    <span id="step1-text" class="font-semibold text-blue-600">Start of Day</span>
+                    <span id="step2-text">End of Day</span>
+                    <span id="step3-text">Review & Save</span>
+                </div>
+            </div>
+
+            <!-- Step 1: Start of Day -->
+            <div id="step1" class="step active">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Step 1: Start of Day</h3>
+                <div class="space-y-4">
+                    <div>
+                        <label for="driverName" class="block text-sm font-medium text-gray-700">Driver Name / Car Plate</label>
+                        <input type="text" id="driverName" placeholder="e.g., Aslam / KHI-123" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-3">
+                    </div>
+                    <div>
+                        <label for="logDate" class="block text-sm font-medium text-gray-700">Date</label>
+                        <input type="date" id="logDate" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-3">
+                    </div>
+                    <div>
+                        <label for="startOdometer" class="block text-sm font-medium text-gray-700">Start Odometer (km)</label>
+                        <input type="number" id="startOdometer" placeholder="Reading at start of day" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-3">
+                    </div>
+                </div>
+                <div class="mt-6 text-right">
+                    <button id="nextBtn1" class="bg-blue-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-800 transition">Next &rarr;</button>
+                </div>
+            </div>
+
+            <!-- Step 2: End of Day Summary -->
+            <div id="step2" class="step">
+                <h3 class="text-xl font-semibold mb-4 text-gray-800">Step 2: End of Day Summary</h3>
+                <div class="space-y-4">
+                     <!-- Odometer Reading -->
+                    <div>
+                        <label for="endOdometer" class="block text-sm font-medium text-gray-700">End Odometer (km)</label>
+                        <input type="number" id="endOdometer" placeholder="Reading at end of day" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-3">
+                    </div>
+                    <!-- Ride Income -->
+                    <div class="p-4 bg-blue-50 rounded-lg space-y-3">
+                        <h4 class="text-md font-semibold text-blue-800">Ride Income</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <input type="number" id="fares" placeholder="Total Fares (PKR)" class="w-full bg-white border-gray-300 rounded-md shadow-sm p-3">
+                            <input type="number" id="commissions" placeholder="Commissions (PKR)" class="w-full bg-white border-gray-300 rounded-md shadow-sm p-3">
+                            <input type="number" id="tipsInput" placeholder="Tips (PKR)" class="w-full bg-white border-gray-300 rounded-md shadow-sm p-3 col-span-2 sm:col-span-1">
+                        </div>
+                        <div class="border-t pt-3 mt-3">
+                            <h4 class="text-sm font-semibold text-blue-800 mb-2">Partnership Model</h4>
+                            <div class="flex space-x-6">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="partnershipModel" value="50-50" checked class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                                    <span class="ml-2 text-sm text-gray-700">50/50 Split</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="partnershipModel" value="45-55" class="h-4 w-4 text-blue-600 border-gray-300 focus:ring-blue-500">
+                                    <span class="ml-2 text-sm text-gray-700">45/55 (Owner pays maintenance)</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Expenses -->
+                    <div class="p-4 bg-gray-50 rounded-lg space-y-3">
+                         <h4 class="text-md font-semibold text-gray-800">Expenses</h4>
+                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                             <input type="number" id="fuelCost" placeholder="Fuel Purchased Today (PKR)" class="w-full bg-white border-gray-300 rounded-md shadow-sm p-3">
+                             <div>
+                                <label for="maintenanceCost" class="flex items-center text-sm font-medium text-gray-700 mb-1">
+                                    Maintenance Cost
+                                    <span class="tooltip-container ml-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" /></svg>
+                                        <span class="tooltip-text">Auto-calculated as Total Distance x 3 PKR. You can override this with an actual repair cost.</span>
+                                    </span>
+                                </label>
+                                <input type="number" id="maintenanceCost" placeholder="Maintenance Cost (PKR)" class="w-full bg-white border-gray-300 rounded-md shadow-sm p-3">
+                             </div>
+                             <input type="number" id="otherExpenses" placeholder="Other Expenses (PKR)" class="w-full bg-white border-gray-300 rounded-md shadow-sm p-3">
+                         </div>
+                         <input type="text" id="expenseNotes" placeholder="Notes (e.g., Puncture repair, car wash)" class="mt-2 block w-full bg-white border-gray-300 rounded-md shadow-sm p-3">
+                    </div>
+                </div>
+                <div class="mt-6 flex justify-between">
+                    <button id="backBtn2" class="bg-gray-200 text-gray-800 font-bold py-2 px-6 rounded-lg hover:bg-gray-300 transition">&larr; Back</button>
+                    <button id="nextBtn2" class="bg-blue-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-800 transition">Review & Save &rarr;</button>
+                </div>
+            </div>
+            
+            <!-- Step 3: Review & Save -->
+            <div id="step3" class="step">
+                 <h3 class="text-xl font-semibold mb-4 text-gray-800">Step 3: Review & Save</h3>
+                 <div class="bg-gray-50 p-4 rounded-lg space-y-4">
+                    <!-- Summary -->
+                    <div class="grid grid-cols-2 gap-4 text-center">
+                        <div class="bg-white p-3 rounded-lg border">
+                            <p class="text-sm text-gray-500">Total Distance</p>
+                            <p id="summaryDistance" class="font-bold text-2xl text-indigo-700">0 km</p>
+                        </div>
+                        <div class="bg-white p-3 rounded-lg border">
+                            <p class="text-sm text-gray-500">Total Earnings</p>
+                            <p id="summaryEarnings" class="font-bold text-2xl text-green-700">PKR 0</p>
+                        </div>
+                    </div>
+                    <!-- Financial Breakdown -->
+                    <div>
+                        <h4 class="font-semibold text-gray-800 mb-2">Daily Financials</h4>
+                        <ul id="summaryCostBreakdown" class="divide-y divide-gray-200">
+                           <!-- Breakdown will be injected here -->
+                        </ul>
+                         <div id="finalProfitSection" class="mt-2 pt-2 border-t">
+                             <div class="py-2">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-lg font-bold text-gray-800">Driver's Take-Home</span>
+                                    <span id="summaryDriverProfit" class="font-extrabold text-2xl text-blue-700">PKR 0</span>
+                                </div>
+                                <div id="driverProfitBreakdown" class="text-sm text-gray-600 pl-4 mt-1 border-l-2 border-blue-200"></div>
+                            </div>
+                            <div class="py-2 border-t">
+                                <div class="flex justify-between items-center">
+                                    <span class="text-lg font-bold text-gray-800">Owner's Cash Take-Home</span>
+                                    <span id="summaryOwnerTakeHome" class="font-extrabold text-2xl text-gray-900">PKR 0</span>
+                                </div>
+                                <div id="ownerProfitBreakdown" class="text-sm text-gray-600 pl-4 mt-1 border-l-2 border-gray-300"></div>
+                            </div>
+                         </div>
+                    </div>
+                 </div>
+                 <div id="step3-buttons" class="mt-6 flex justify-between gap-4">
+                    <button id="backBtn3" class="bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded-lg hover:bg-gray-400 transition w-full md:w-auto">&larr; Back</button>
+                    <button id="saveLogBtn" class="bg-blue-700 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-800 transition shadow-md w-full">
+                        Save Daily Log
+                    </button>
+                </div>
+                <p id="feedbackMessage" class="text-center text-green-600 font-semibold mt-4"></p>
+            </div>
+        </main>
+
+        <!-- Log History Section -->
+        <section class="bg-white p-6 rounded-2xl shadow-lg">
+            <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Fleet Performance Dashboard</h2>
+            
+            <!-- Filters & Reports -->
+            <div class="bg-gray-50 p-4 rounded-lg mb-6 border flex flex-wrap gap-4 items-center justify-between">
+                <div class="flex-grow">
+                    <label for="dateFilter" class="text-sm font-medium text-gray-700">Date Range</label>
+                    <select id="dateFilter" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                        <option value="all">All Time</option>
+                        <option value="this-week">This Week</option>
+                        <option value="last-week">Last Week</option>
+                        <option value="this-month">This Month</option>
+                        <option value="last-month">Last Month</option>
+                    </select>
+                </div>
+                 <div class="flex-grow">
+                    <label for="driverFilter" class="text-sm font-medium text-gray-700">Driver</label>
+                    <select id="driverFilter" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2">
+                        <option value="all">All Drivers</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="invisible text-sm">Export</label>
+                    <button id="exportCsvBtn" class="mt-1 w-full bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition">
+                        Export CSV
+                    </button>
+                </div>
+            </div>
+
+            <!-- Analytics Dashboard -->
+            <div id="analyticsDashboard" class="bg-indigo-50 p-4 rounded-lg mb-6 border border-indigo-200">
+                <h3 class="text-lg font-semibold text-indigo-900 mb-3 text-center">Summary</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-center">
+                    <div class="bg-white p-2 rounded-md shadow-sm">
+                        <p class="text-xs text-gray-500">Avg. Driver Profit</p>
+                        <p id="analyticsAvgDriverProfit" class="font-bold text-lg text-blue-700">PKR 0</p>
+                    </div>
+                     <div class="bg-white p-2 rounded-md shadow-sm">
+                        <p class="text-xs text-gray-500">Avg. Owner Profit</p>
+                        <p id="analyticsAvgOwnerProfit" class="font-bold text-lg text-gray-800">PKR 0</p>
+                    </div>
+                    <div class="bg-white p-2 rounded-md shadow-sm">
+                        <p class="text-xs text-gray-500">Total Distance</p>
+                        <p id="analyticsTotalDistance" class="font-bold text-lg text-indigo-800">0 km</p>
+                    </div>
+                    <div class="bg-indigo-600 text-white p-2 rounded-md shadow-sm">
+                        <p class="text-xs text-indigo-200">Avg. Fuel Efficiency</p>
+                        <p id="analyticsFuelEfficiency" class="font-extrabold text-xl">0 PKR/km</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Visual Analytics -->
+            <div id="visualAnalytics" class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-4 rounded-lg border">
+                    <h4 class="font-semibold text-center mb-2">Total Profit Per Driver</h4>
+                    <canvas id="profitDriverChart"></canvas>
+                </div>
+                <div class="bg-white p-4 rounded-lg border">
+                     <h4 class="font-semibold text-center mb-2">Expense Breakdown</h4>
+                    <canvas id="expensePieChart"></canvas>
+                </div>
+                 <div class="bg-white p-4 rounded-lg border lg:col-span-2">
+                     <h4 class="font-semibold text-center mb-2">Owner Profit Over Time</h4>
+                    <canvas id="profitTimeChart"></canvas>
+                </div>
+            </div>
+
+             <div id="loading" class="text-center py-4">
+                <p class="text-gray-500">Loading entries...</p>
+            </div>
+            <div id="logHistoryContainer" class="divide-y divide-gray-200 max-h-[60vh] overflow-y-auto">
+                <!-- Log entries will be injected here by JavaScript -->
+            </div>
+             <p id="noLogsMessage" class="text-center text-gray-500 hidden py-4">No logs have been recorded yet.</p>
+        </section>
+        
+        <footer class="text-center mt-12 text-sm text-gray-500">
+            <p>Fleet Management System v4.9</p>
+        </footer>
+    </div>
+    
+    <!-- Deletion Confirmation Modal -->
+    <div id="deleteModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center hidden z-50">
+        <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div class="mt-3 text-center">
+                <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
+                    <svg class="h-6 w-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-lg leading-6 font-medium text-gray-900 mt-2">Delete Log Entry</h3>
+                <div class="mt-2 px-7 py-3">
+                    <p class="text-sm text-gray-500">Are you sure you want to delete this log? This action cannot be undone.</p>
+                </div>
+                <div class="flex items-center justify-center gap-4 px-4 py-3">
+                    <button id="cancelDeleteBtn" class="px-4 py-2 bg-gray-200 text-gray-900 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300">
+                        Cancel
+                    </button>
+                    <button id="confirmDeleteBtn" class="px-4 py-2 bg-red-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300">
+                        Delete
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase Compatibility Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            let currentStep = 1;
+            let maintenanceManuallySet = false;
+            let currentEditId = null;
+            let docIdToDelete = null;
+            let allLogs = [];
+            let charts = {};
+
+            // --- DOM Elements ---
+            const progressBar = document.getElementById('progressBar');
+            const stepTexts = [document.getElementById('step1-text'), document.getElementById('step2-text'), document.getElementById('step3-text')];
+            const steps = [document.getElementById('step1'), document.getElementById('step2'), document.getElementById('step3')];
+            
+            // Step 1
+            const driverNameInput = document.getElementById('driverName');
+            const logDateInput = document.getElementById('logDate');
+            const startOdometerInput = document.getElementById('startOdometer');
+            const nextBtn1 = document.getElementById('nextBtn1');
+
+            // Step 2
+            const endOdometerInput = document.getElementById('endOdometer');
+            const faresInput = document.getElementById('fares');
+            const commissionsInput = document.getElementById('commissions');
+            const tipsInput = document.getElementById('tipsInput');
+            const fuelCostInput = document.getElementById('fuelCost');
+            const maintenanceCostInput = document.getElementById('maintenanceCost');
+            const otherExpensesInput = document.getElementById('otherExpenses');
+            const expenseNotesInput = document.getElementById('expenseNotes');
+            const backBtn2 = document.getElementById('backBtn2');
+            const nextBtn2 = document.getElementById('nextBtn2');
+
+            // Step 3
+            const summaryDistance = document.getElementById('summaryDistance');
+            const summaryEarnings = document.getElementById('summaryEarnings');
+            const summaryCostBreakdown = document.getElementById('summaryCostBreakdown');
+            const summaryDriverProfit = document.getElementById('summaryDriverProfit');
+            const summaryOwnerTakeHome = document.getElementById('summaryOwnerTakeHome');
+            const driverProfitBreakdown = document.getElementById('driverProfitBreakdown');
+            const ownerProfitBreakdown = document.getElementById('ownerProfitBreakdown');
+            const step3Buttons = document.getElementById('step3-buttons');
+            const backBtn3 = document.getElementById('backBtn3');
+            const saveLogBtn = document.getElementById('saveLogBtn');
+            const feedbackMessage = document.getElementById('feedbackMessage');
+            
+            // Analytics
+            const analyticsTotalDistance = document.getElementById('analyticsTotalDistance');
+            const analyticsAvgDriverProfit = document.getElementById('analyticsAvgDriverProfit');
+            const analyticsAvgOwnerProfit = document.getElementById('analyticsAvgOwnerProfit');
+            const analyticsFuelEfficiency = document.getElementById('analyticsFuelEfficiency');
+            const dateFilter = document.getElementById('dateFilter');
+            const driverFilter = document.getElementById('driverFilter');
+            const exportCsvBtn = document.getElementById('exportCsvBtn');
+
+            // History
+            const logHistoryContainer = document.getElementById('logHistoryContainer');
+            const noLogsMessage = document.getElementById('noLogsMessage');
+            const loadingMessage = document.getElementById('loading');
+
+            // Modal
+            const deleteModal = document.getElementById('deleteModal');
+            const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+            const cancelDeleteBtn = document.getElementById('cancelDeleteBtn');
+            
+            // --- Core Logic ---
+            function calculateProfits(data) {
+                let ownerTakeHome, ownerProfit, driverTakeHomeFromFares, driverTotalTakeHome;
+                const partnershipModel = data.partnershipModel || '50-50';
+
+                if (partnershipModel === '50-50') {
+                    const cashProfit = (data.fares || 0) - (data.commissions || 0) - (data.fuelCost || 0) - (data.otherExpenses || 0);
+                    const trueProfit = cashProfit - (data.maintenanceCost || 0);
+                    
+                    ownerProfit = trueProfit * 0.5;
+                    driverTakeHomeFromFares = trueProfit * 0.5;
+                    
+                    ownerTakeHome = ownerProfit + (data.maintenanceCost || 0); // Owner gets their profit + the entire maintenance fund
+                } else { // 45-55 model
+                    const profitBeforeMaintenance = (data.fares || 0) - (data.commissions || 0) - (data.fuelCost || 0) - (data.otherExpenses || 0);
+                    driverTakeHomeFromFares = profitBeforeMaintenance * 0.45;
+                    const ownerShare = profitBeforeMaintenance * 0.55;
+                    ownerTakeHome = ownerShare; 
+                    ownerProfit = ownerShare - (data.maintenanceCost || 0);
+                }
+                driverTotalTakeHome = driverTakeHomeFromFares + (data.tips || 0);
+                return { ownerTakeHome, ownerProfit, driverTotalTakeHome, driverTakeHomeFromFares };
+            }
+
+            function updateStepUI() {
+                steps.forEach((step, index) => {
+                    step.classList.toggle('active', index + 1 === currentStep);
+                });
+                progressBar.style.width = `${(currentStep / 3) * 100}%`;
+                stepTexts.forEach((text, index) => {
+                    text.classList.toggle('font-semibold', index + 1 <= currentStep);
+                    text.classList.toggle('text-blue-600', index + 1 <= currentStep);
+                });
+            }
+
+            function getInputs() {
+                const startOdometer = parseFloat(startOdometerInput.value) || 0;
+                const endOdometer = parseFloat(endOdometerInput.value) || 0;
+                const totalDistance = endOdometer > startOdometer ? endOdometer - startOdometer : 0;
+                
+                if (!maintenanceManuallySet) {
+                    maintenanceCostInput.value = (totalDistance * 3).toFixed(0);
+                }
+
+                return {
+                    driverName: driverNameInput.value.trim(),
+                    logDate: logDateInput.value,
+                    startOdometer,
+                    endOdometer,
+                    totalDistance,
+                    fares: parseFloat(faresInput.value) || 0,
+                    commissions: parseFloat(commissionsInput.value) || 0,
+                    tips: parseFloat(tipsInput.value) || 0,
+                    fuelCost: parseFloat(fuelCostInput.value) || 0,
+                    maintenanceCost: parseFloat(maintenanceCostInput.value) || 0,
+                    otherExpenses: parseFloat(otherExpensesInput.value) || 0,
+                    expenseNotes: expenseNotesInput.value.trim(),
+                    partnershipModel: document.querySelector('input[name="partnershipModel"]:checked').value
+                };
+            }
+
+            function populateSummary() {
+                const data = getInputs();
+                const { ownerTakeHome, ownerProfit, driverTotalTakeHome, driverTakeHomeFromFares } = calculateProfits(data);
+                const totalEarnings = data.fares + data.tips;
+
+                summaryDistance.textContent = `${data.totalDistance.toLocaleString()} km`;
+                summaryEarnings.textContent = `PKR ${totalEarnings.toLocaleString()}`;
+                summaryDriverProfit.textContent = `PKR ${driverTotalTakeHome.toLocaleString()}`;
+                summaryOwnerTakeHome.textContent = `PKR ${ownerTakeHome.toLocaleString()}`;
+                
+                let breakdownHTML = '';
+                 if (data.partnershipModel === '50-50') {
+                    const cashProfit = (data.fares || 0) - (data.commissions || 0) - (data.fuelCost || 0) - (data.otherExpenses || 0);
+                    const trueProfit = cashProfit - (data.maintenanceCost || 0);
+                    breakdownHTML = `
+                        <li class="flex justify-between items-center py-2"><span class="text-gray-600">Total Fares</span><span class="font-semibold text-green-700">PKR ${data.fares.toLocaleString()}</span></li>
+                        <li class="py-1">
+                            <span class="text-sm text-gray-500 pl-4">(-) Cash Costs</span>
+                            <ul class="text-xs text-gray-500 pl-8">
+                                <li class="flex justify-between"><span>Commissions</span> <span class="text-red-600">- PKR ${data.commissions.toLocaleString()}</span></li>
+                                <li class="flex justify-between"><span>Fuel Cost</span> <span class="text-red-600">- PKR ${data.fuelCost.toLocaleString()}</span></li>
+                                <li class="flex justify-between"><span>Other Expenses</span> <span class="text-red-600">- PKR ${data.otherExpenses.toLocaleString()}</span></li>
+                            </ul>
+                        </li>
+                        <li class="flex justify-between items-center py-1 border-t mt-1"><span class="text-gray-600">Cash Profit before Maint.</span><span class="font-semibold text-gray-800">PKR ${cashProfit.toLocaleString()}</span></li>
+                        <li class="flex justify-between items-center py-1"><span class="text-gray-600 pl-4">(-) Est. Maintenance Fund</span><span class="font-semibold text-red-600">- PKR ${data.maintenanceCost.toLocaleString()}</span></li>
+                        <li class="flex justify-between items-center py-2 border-t"><span class="text-gray-600">True Profit to Split</span><span class="font-bold text-gray-900">PKR ${trueProfit.toLocaleString()}</span></li>
+                    `;
+                } else { // 45-55
+                    const profitBeforeMaintenance = driverTakeHomeFromFares / 0.45;
+                     breakdownHTML = `
+                        <li class="flex justify-between items-center py-2"><span class="text-gray-600">Total Fares</span><span class="font-semibold text-green-700">PKR ${data.fares.toLocaleString()}</span></li>
+                        <li class="py-1">
+                            <span class="text-sm text-gray-500 pl-4">(-) Costs (before Maint.)</span>
+                            <ul class="text-xs text-gray-500 pl-8">
+                                <li class="flex justify-between"><span>Commissions</span> <span class="text-red-600">- PKR ${data.commissions.toLocaleString()}</span></li>
+                                <li class="flex justify-between"><span>Fuel Cost</span> <span class="text-red-600">- PKR ${data.fuelCost.toLocaleString()}</span></li>
+                                <li class="flex justify-between"><span>Other Expenses</span> <span class="text-red-600">- PKR ${data.otherExpenses.toLocaleString()}</span></li>
+                            </ul>
+                        </li>
+                        <li class="flex justify-between items-center py-2 border-t mt-1"><span class="text-gray-600">Profit Before Maintenance</span><span class="font-semibold text-gray-800">PKR ${profitBeforeMaintenance.toLocaleString()}</span></li>
+                    `;
+                }
+                summaryCostBreakdown.innerHTML = breakdownHTML;
+
+                // Driver and Owner profit breakdowns
+                 driverProfitBreakdown.innerHTML = `
+                    <div class="flex justify-between"><span>Share of Profit</span> <span>PKR ${driverTakeHomeFromFares.toLocaleString()}</span></div>
+                    <div class="flex justify-between"><span>(+) Tips</span> <span class="text-green-600">PKR ${data.tips.toLocaleString()}</span></div>
+                `;
+
+                if (data.partnershipModel === '50-50') {
+                     ownerProfitBreakdown.innerHTML = `
+                        <div class="flex justify-between"><span>Owner's Share of Profit</span> <span>PKR ${ownerProfit.toLocaleString()}</span></div>
+                         <div class="flex justify-between text-xs"><span>(This is the cash after all costs, including maintenance, are split)</span></div>
+                    `;
+                } else { // 45-55
+                     ownerProfitBreakdown.innerHTML = `
+                        <div class="flex justify-between"><span>Owner's Share (55%)</span> <span>PKR ${ownerTakeHome.toLocaleString()}</span></div>
+                        <div class="flex justify-between text-xs"><span>Owner's True Profit after Maint. Fund:</span> <span class="font-semibold">PKR ${ownerProfit.toLocaleString()}</span></div>
+                    `;
+                }
+
+                summaryDriverProfit.classList.toggle('text-red-600', driverTotalTakeHome < 0);
+                summaryDriverProfit.classList.toggle('text-blue-700', driverTotalTakeHome >= 0);
+                summaryOwnerTakeHome.classList.toggle('text-red-600', ownerTakeHome < 0);
+                summaryOwnerTakeHome.classList.toggle('text-gray-900', ownerTakeHome >= 0);
+            }
+            
+            function displayAppFeedback(message, type) {
+                feedbackMessage.textContent = message;
+                feedbackMessage.className = `text-center font-semibold mt-4 ${type === 'success' ? 'text-green-600' : 'text-red-600'}`;
+                setTimeout(() => { feedbackMessage.textContent = ''; }, 3000);
+            }
+            
+            function clearForm() {
+                [driverNameInput, startOdometerInput, endOdometerInput, faresInput, commissionsInput, tipsInput, maintenanceCostInput, expenseNotesInput, otherExpensesInput, fuelCostInput].forEach(el => el.value = '');
+                maintenanceManuallySet = false;
+                document.querySelector('input[name="partnershipModel"][value="50-50"]').checked = true;
+                setInitialDate();
+            }
+
+            function setInitialDate() {
+                if (!logDateInput.value) {
+                    const today = new Date();
+                    const year = today.getFullYear();
+                    const month = String(today.getMonth() + 1).padStart(2, '0');
+                    const day = String(today.getDate()).padStart(2, '0');
+                    logDateInput.value = `${year}-${month}-${day}`;
+                }
+            }
+            
+            // --- Navigation Logic ---
+            nextBtn1.addEventListener('click', () => { currentStep = 2; updateStepUI(); });
+            nextBtn2.addEventListener('click', () => {
+                populateSummary(); 
+                currentStep = 3; 
+                updateStepUI(); 
+            });
+            backBtn2.addEventListener('click', () => { currentStep = 1; updateStepUI(); });
+            backBtn3.addEventListener('click', () => { currentStep = 2; updateStepUI(); });
+
+            [endOdometerInput, startOdometerInput].forEach(el => {
+                el.addEventListener('input', () => {
+                    maintenanceManuallySet = false;
+                    const data = getInputs();
+                    maintenanceCostInput.value = (data.totalDistance * 3).toFixed(0);
+                });
+            });
+            maintenanceCostInput.addEventListener('input', () => { maintenanceManuallySet = true; });
+
+            // --- Initialization ---
+            function init() {
+                setInitialDate();
+                updateStepUI();
+
+                let firebaseConfig;
+                try {
+                    firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+                } catch (e) { firebaseConfig = {}; }
+
+                if (firebaseConfig && firebaseConfig.apiKey && typeof firebase !== 'undefined') {
+                    initializeAppWithFirebase(firebaseConfig);
+                } else {
+                    setupLocalMode();
+                }
+            }
+            
+            function setupLocalMode() {
+                saveLogBtn.textContent = "Saving Disabled";
+                saveLogBtn.disabled = true;
+                saveLogBtn.classList.add('bg-gray-400', 'cursor-not-allowed');
+                loadingMessage.textContent = "Log history is disabled when running locally or offline.";
+                noLogsMessage.classList.add('hidden');
+            }
+            
+            function initializeAppWithFirebase(config) {
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-fleet-app';
+                firebase.initializeApp(config);
+                const auth = firebase.auth();
+                const db = firebase.firestore();
+                const logsCollection = db.collection(`/artifacts/${appId}/public/data/daily_logs`);
+
+                async function authenticateUser() {
+                    try {
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                            await auth.signInWithCustomToken(__initial_auth_token);
+                        } else {
+                            await auth.signInAnonymously();
+                        }
+                    } catch (error) { console.error("Authentication failed:", error); }
+                }
+
+                function handleSaveOrUpdate() {
+                    if (currentEditId) {
+                        updateLog(currentEditId);
+                    } else {
+                        saveNewLog();
+                    }
+                }
+
+                async function saveNewLog() {
+                    const data = getInputs();
+                    
+                    if (!data.driverName || !data.logDate || !data.fares) {
+                        displayAppFeedback("Please fill in Driver Name, Date, and Total Fares.", "error"); return;
+                    }
+                    if (data.totalDistance <= 0) {
+                        displayAppFeedback("End Odometer must be greater than Start Odometer.", "error"); return;
+                    }
+
+                    try {
+                        saveLogBtn.disabled = true;
+                        saveLogBtn.textContent = "Saving...";
+                        await logsCollection.add({ ...data, createdAt: firebase.firestore.FieldValue.serverTimestamp() });
+                        displayAppFeedback("Log saved successfully!", "success");
+                        clearForm();
+                        currentStep = 1;
+                        updateStepUI();
+                    } catch (error) {
+                        console.error("Error adding document: ", error);
+                        displayAppFeedback("Failed to save log. Please try again.", "error");
+                    } finally {
+                        saveLogBtn.disabled = false;
+                        saveLogBtn.textContent = "Save Daily Log";
+                    }
+                }
+
+                async function updateLog(docId) {
+                    const data = getInputs();
+                    if (!data.driverName || !data.logDate || !data.fares) {
+                        displayAppFeedback("Driver Name, Date, and Fares cannot be empty.", "error"); return;
+                    }
+                    if (data.totalDistance <= 0) {
+                         displayAppFeedback("End Odometer must be greater than Start Odometer.", "error"); return;
+                    }
+                    
+                    try {
+                         saveLogBtn.disabled = true;
+                         saveLogBtn.textContent = "Updating...";
+                         await logsCollection.doc(docId).update(data);
+                         displayAppFeedback("Log updated successfully!", "success");
+                         cancelEdit(); 
+                    } catch(error) {
+                        console.error("Error updating document:", error);
+                        displayAppFeedback("Failed to update log.", "error");
+                    } finally {
+                        saveLogBtn.disabled = false;
+                    }
+                }
+
+                function showDeleteModal(docId) {
+                    docIdToDelete = docId;
+                    deleteModal.classList.remove('hidden');
+                }
+
+                function hideDeleteModal() {
+                    docIdToDelete = null;
+                    deleteModal.classList.add('hidden');
+                }
+
+                async function executeDelete() {
+                    if (!docIdToDelete) return;
+                    try {
+                        await logsCollection.doc(docIdToDelete).delete();
+                        displayAppFeedback("Log deleted successfully.", "success");
+                    } catch (error) {
+                        console.error("Error deleting document:", error);
+                        displayAppFeedback("Failed to delete log.", "error");
+                    } finally {
+                        hideDeleteModal();
+                    }
+                }
+
+                cancelDeleteBtn.addEventListener('click', hideDeleteModal);
+                confirmDeleteBtn.addEventListener('click', executeDelete);
+                
+                // --- Edit Mode Logic ---
+                function startEdit(id, log) {
+                    currentEditId = id;
+                    driverNameInput.value = log.driverName || '';
+                    logDateInput.value = log.logDate || '';
+                    startOdometerInput.value = log.startOdometer || 0;
+                    endOdometerInput.value = log.endOdometer || 0;
+                    faresInput.value = log.fares || 0;
+                    commissionsInput.value = log.commissions || 0;
+                    tipsInput.value = log.tips || 0;
+                    fuelCostInput.value = log.fuelCost || 0;
+                    maintenanceCostInput.value = log.maintenanceCost || 0;
+                    maintenanceManuallySet = true;
+                    otherExpensesInput.value = log.otherExpenses || 0;
+                    expenseNotesInput.value = log.expenseNotes || '';
+                    document.querySelector(`input[name="partnershipModel"][value="${log.partnershipModel || '50-50'}"]`).checked = true;
+
+                    saveLogBtn.textContent = "Update Log";
+                    saveLogBtn.classList.remove('bg-blue-700', 'hover:bg-blue-800');
+                    saveLogBtn.classList.add('bg-yellow-500', 'hover:bg-yellow-600');
+
+                    if (!document.getElementById('cancelEditBtn')) {
+                        const cancelButton = document.createElement('button');
+                        cancelButton.id = 'cancelEditBtn';
+                        cancelButton.textContent = 'Cancel Edit';
+                        cancelButton.className = 'bg-gray-300 text-gray-800 font-bold py-3 px-6 rounded-lg hover:bg-gray-400 transition w-full md:w-auto order-first';
+                        step3Buttons.insertBefore(cancelButton, backBtn3.nextSibling); 
+                        cancelButton.addEventListener('click', cancelEdit);
+                    }
+                    
+                    currentStep = 1;
+                    updateStepUI();
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+            
+                function cancelEdit() {
+                    currentEditId = null;
+                    clearForm();
+                    
+                    saveLogBtn.textContent = "Save Daily Log";
+                    saveLogBtn.classList.add('bg-blue-700', 'hover:bg-blue-800');
+                    saveLogBtn.classList.remove('bg-yellow-500', 'hover:bg-yellow-600');
+
+                    const cancelButton = document.getElementById('cancelEditBtn');
+                    if (cancelButton) {
+                        cancelButton.remove();
+                    }
+
+                    currentStep = 1;
+                    updateStepUI();
+                }
+
+                // --- DATA RENDERING ---
+
+                function renderFilteredData() {
+                    const selectedDriver = driverFilter.value;
+                    const selectedDateRange = dateFilter.value;
+                    
+                    const now = new Date();
+                    let startDate = new Date(0); 
+                    let endDate = new Date(8640000000000000); 
+                    now.setHours(0,0,0,0);
+                    
+                    if (selectedDateRange === 'this-week') {
+                        const dayOfWeek = now.getDay();
+                        startDate = new Date(new Date().setDate(now.getDate() - dayOfWeek));
+                    } else if (selectedDateRange === 'last-week') {
+                         const today = new Date();
+                         const dayOfWeek = today.getDay();
+                         endDate = new Date(new Date().setDate(today.getDate() - dayOfWeek - 1));
+                         startDate = new Date(new Date().setDate(endDate.getDate() - 6));
+                    } else if (selectedDateRange === 'this-month') {
+                         startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                    } else if (selectedDateRange === 'last-month') {
+                        endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+                        startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+                    }
+                    
+                    const filteredLogs = allLogs.filter(log => {
+                        const logDate = new Date(log.logDate + 'T00:00:00');
+                        const driverMatch = selectedDriver === 'all' || log.driverName === selectedDriver;
+                        const dateMatch = logDate >= startDate && logDate <= endDate;
+                        return driverMatch && dateMatch;
+                    });
+                    
+                    updateAnalytics(filteredLogs);
+                    updateCharts(filteredLogs);
+                    updateLogHistory(filteredLogs);
+                }
+                
+                function updateAnalytics(logs) {
+                    let totalDistance = 0, totalFuel = 0, totalDriverProfit = 0, totalOwnerProfit = 0;
+                    
+                    logs.forEach(log => {
+                        const { ownerProfit, driverTotalTakeHome } = calculateProfits(log);
+                        totalDistance += log.totalDistance || 0;
+                        totalFuel += log.fuelCost || 0;
+                        totalDriverProfit += driverTotalTakeHome;
+                        totalOwnerProfit += ownerProfit;
+                    });
+                    
+                    const logCount = logs.length;
+                    analyticsTotalDistance.textContent = `${totalDistance.toLocaleString()} km`;
+                    const avgDriverProfit = logCount > 0 ? (totalDriverProfit / logCount) : 0;
+                    const avgOwnerProfit = logCount > 0 ? (totalOwnerProfit / logCount) : 0;
+                    analyticsAvgDriverProfit.textContent = `PKR ${avgDriverProfit.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+                    analyticsAvgOwnerProfit.textContent = `PKR ${avgOwnerProfit.toLocaleString(undefined, {maximumFractionDigits: 0})}`;
+                    const efficiency = totalDistance > 0 && totalFuel > 0 ? (totalFuel / totalDistance) : 0;
+                    analyticsFuelEfficiency.textContent = `${efficiency.toFixed(2)} PKR/km`;
+                }
+                
+                function updateCharts(logs) {
+                    updateProfitDriverChart(logs);
+                    updateProfitTimeChart(logs);
+                    updateExpensePieChart(logs);
+                }
+
+                function updateProfitDriverChart(logs) {
+                    const ctx = document.getElementById('profitDriverChart').getContext('2d');
+                    if (charts.profitDriver) charts.profitDriver.destroy();
+                    
+                    const driverData = logs.reduce((acc, log) => {
+                        const { ownerProfit, driverTotalTakeHome } = calculateProfits(log);
+                        if (!acc[log.driverName]) {
+                            acc[log.driverName] = { owner: 0, driver: 0 };
+                        }
+                        acc[log.driverName].owner += ownerProfit;
+                        acc[log.driverName].driver += driverTotalTakeHome;
+                        return acc;
+                    }, {});
+
+                    charts.profitDriver = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: Object.keys(driverData),
+                            datasets: [{
+                                label: 'Driver Profit',
+                                data: Object.values(driverData).map(d => d.driver),
+                                backgroundColor: 'rgba(59, 130, 246, 0.7)',
+                            },{
+                                label: 'Owner Profit',
+                                data: Object.values(driverData).map(d => d.owner),
+                                backgroundColor: 'rgba(107, 114, 128, 0.7)',
+                            }]
+                        },
+                        options: { scales: { y: { beginAtZero: true } } }
+                    });
+                }
+                
+                function updateProfitTimeChart(logs) {
+                     const ctx = document.getElementById('profitTimeChart').getContext('2d');
+                     if (charts.profitTime) charts.profitTime.destroy();
+                     
+                     const timeData = logs.reduce((acc, log) => {
+                        const { ownerProfit } = calculateProfits(log);
+                        if (!acc[log.logDate]) {
+                           acc[log.logDate] = 0;
+                        }
+                        acc[log.logDate] += ownerProfit;
+                        return acc;
+                     }, {});
+                     
+                     const sortedDates = Object.keys(timeData).sort((a,b) => new Date(a) - new Date(b));
+                     
+                     charts.profitTime = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: sortedDates,
+                            datasets: [{
+                                label: 'Owner Profit',
+                                data: sortedDates.map(date => timeData[date]),
+                                borderColor: 'rgba(139, 92, 246, 1)',
+                                tension: 0.1,
+                                fill: false
+                            }]
+                        }
+                     });
+                }
+
+                function updateExpensePieChart(logs) {
+                     const ctx = document.getElementById('expensePieChart').getContext('2d');
+                     if (charts.expensePie) charts.expensePie.destroy();
+
+                     const expenseData = logs.reduce((acc, log) => {
+                        acc.Commissions += log.commissions || 0;
+                        acc.Fuel += log.fuelCost || 0;
+                        acc.Maintenance += log.maintenanceCost || 0;
+                        acc.Other += log.otherExpenses || 0;
+                        return acc;
+                     }, { Commissions: 0, Fuel: 0, Maintenance: 0, Other: 0 });
+                     
+                     charts.expensePie = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: Object.keys(expenseData),
+                            datasets: [{
+                                data: Object.values(expenseData),
+                                backgroundColor: ['#EF4444', '#F97316', '#8B5CF6', '#6B7280']
+                            }]
+                        }
+                     });
+                }
+                
+                function updateLogHistory(logs) {
+                    logHistoryContainer.innerHTML = '';
+                    if (logs.length === 0) {
+                        noLogsMessage.classList.remove('hidden');
+                    } else {
+                        noLogsMessage.classList.add('hidden');
+                        logs.forEach(log => {
+                           logHistoryContainer.appendChild(createLogElement(log.id, log));
+                        });
+                    }
+                }
+                
+                function exportToCSV(logs) {
+                    const headers = ['Date', 'Driver', 'Model', 'Fares', 'Commissions', 'Tips', 'Fuel Cost', 'Maintenance Cost', 'Other Expenses', 'Start Odometer', 'End Odometer', 'Total Distance', 'Owner Cash Take-Home', 'Owner True Profit', 'Driver Profit'];
+                    const rows = logs.map(log => {
+                        const { ownerTakeHome, ownerProfit, driverTotalTakeHome } = calculateProfits(log);
+                        return [
+                           log.logDate,
+                           log.driverName,
+                           log.partnershipModel,
+                           log.fares, log.commissions, log.tips, log.fuelCost, log.maintenanceCost, log.otherExpenses,
+                           log.startOdometer, log.endOdometer, log.totalDistance,
+                           ownerTakeHome.toFixed(2), ownerProfit.toFixed(2), driverTotalTakeHome.toFixed(2)
+                        ].join(',');
+                    });
+                    
+                    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(',')].concat(rows).join("\n");
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", "fleet_log_export.csv");
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                }
+                exportCsvBtn.addEventListener('click', () => {
+                   const selectedDriver = driverFilter.value;
+                   const selectedDateRange = dateFilter.value;
+                   const filteredLogs = allLogs.filter(log => { // Re-filter for export
+                        const logDate = new Date(log.logDate + 'T00:00:00');
+                        const driverMatch = selectedDriver === 'all' || log.driverName === selectedDriver;
+                        let dateMatch = true; // Default to all
+                        const now = new Date();
+                        now.setHours(0,0,0,0);
+                        let startDate, endDate;
+                        if (selectedDateRange === 'this-week') {
+                            const dayOfWeek = now.getDay();
+                            startDate = new Date(new Date().setDate(now.getDate() - dayOfWeek));
+                            endDate = new Date();
+                        } else if (selectedDateRange === 'last-week') {
+                             const today = new Date();
+                             const dayOfWeek = today.getDay();
+                             endDate = new Date(new Date().setDate(today.getDate() - dayOfWeek - 1));
+                             startDate = new Date(new Date().setDate(endDate.getDate() - 6));
+                        } else if (selectedDateRange === 'this-month') {
+                             startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+                             endDate = new Date();
+                        } else if (selectedDateRange === 'last-month') {
+                            endDate = new Date(now.getFullYear(), now.getMonth(), 0);
+                            startDate = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+                        }
+                        if(startDate && endDate) dateMatch = logDate >= startDate && logDate <= endDate;
+
+                        return driverMatch && dateMatch;
+                    });
+                   exportToCSV(filteredLogs);
+                });
+
+                function listenForLogs() {
+                    const q = logsCollection.orderBy("logDate", "desc");
+                    q.onSnapshot((querySnapshot) => {
+                        loadingMessage.classList.add('hidden');
+                        allLogs = []; // Reset master log array
+                        querySnapshot.forEach((doc) => {
+                           allLogs.push({id: doc.id, ...doc.data()});
+                        });
+                        
+                        // Populate driver filter
+                        const driverNames = [...new Set(allLogs.map(log => log.driverName))];
+                        driverFilter.innerHTML = '<option value="all">All Drivers</option>';
+                        driverNames.sort().forEach(name => {
+                           const option = document.createElement('option');
+                           option.value = name;
+                           option.textContent = name;
+                           driverFilter.appendChild(option);
+                        });
+
+                        renderFilteredData();
+
+                    }, (error) => { console.error("Error with snapshot listener:", error); });
+                }
+                
+                function createLogElement(id, log) {
+                    const div = document.createElement('div');
+                    div.className = 'log-entry py-4';
+                    const { ownerProfit, driverTotalTakeHome } = calculateProfits(log);
+                    
+                    const profitBeforeMaintenance = (log.fares || 0) - (log.commissions || 0) - (log.fuelCost || 0) - (log.otherExpenses || 0);
+
+                    const date = new Date(log.logDate + 'T00:00:00');
+                    const formattedDate = date.toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+                    
+                    const dailyEfficiency = log.fuelCost > 0 && log.totalDistance > 0 ? (log.fuelCost / log.totalDistance).toFixed(2) + ' PKR/km' : 'N/A';
+                    const modelText = log.partnershipModel === '45-55' ? '45/55' : '50/50';
+
+                    div.innerHTML = `
+                        <div class="grid grid-cols-2 md:grid-cols-7 gap-4 items-center cursor-pointer summary-row">
+                             <div class="md:col-span-2">
+                                <p class="font-bold text-gray-900">${log.driverName}</p>
+                                <p class="text-sm text-gray-500">${formattedDate} <span class="text-xs font-semibold text-gray-400 ml-2">(${modelText})</span></p>
+                            </div>
+                            <div class="text-right md:text-left"><p class="text-sm text-gray-500">Fares</p><p class="font-semibold text-gray-800">PKR ${log.fares.toLocaleString()}</p></div>
+                            <div class="text-right md:text-left"><p class="text-sm text-gray-500">Profit (B/M)</p><p class="font-semibold text-gray-800">PKR ${profitBeforeMaintenance.toLocaleString()}</p></div>
+                            <div class="text-right md:text-left"><p class="text-sm text-gray-500">Owner Profit</p><p class="font-semibold text-gray-800">PKR ${ownerProfit.toLocaleString()}</p></div>
+                            <div class="text-right md:text-left"><p class="text-sm text-gray-500">Driver Profit</p><p class="font-semibold text-blue-700">PKR ${driverTotalTakeHome.toLocaleString()}</p></div>
+                            <div class="text-right md:text-left flex items-center justify-end md:justify-start">
+                                <button data-id="${id}" class="edit-btn text-blue-500 hover:text-blue-700 text-sm font-semibold p-1 rounded hover:bg-blue-50">Edit</button>
+                                <button data-id="${id}" class="delete-btn text-red-500 hover:text-red-700 text-sm font-semibold p-1 rounded hover:bg-red-50">Del</button>
+                            </div>
+                        </div>
+                        <div class="details-section mt-2 p-3 bg-gray-50 rounded-md text-sm">
+                             <div class="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-3">
+                                <h5 class="col-span-full font-semibold text-gray-700 border-b pb-1">Income</h5>
+                                <div class="bg-white p-2 rounded-lg border"><p class="text-xs text-gray-500">Fares</p><p class="font-semibold text-gray-800">PKR ${log.fares.toLocaleString()}</p></div>
+                                <div class="bg-white p-2 rounded-lg border"><p class="text-xs text-gray-500">Commissions</p><p class="font-semibold text-red-600">- PKR ${log.commissions.toLocaleString()}</p></div>
+                                <div class="bg-white p-2 rounded-lg border"><p class="text-xs text-gray-500">Tips</p><p class="font-semibold text-green-600">+ PKR ${log.tips.toLocaleString()}</p></div>
+
+                                <h5 class="col-span-full font-semibold text-gray-700 border-b pb-1 mt-2">Distance</h5>
+                                <div class="bg-white p-2 rounded-lg border"><p class="text-xs text-gray-500">Start Odometer</p><p class="font-semibold text-gray-800">${log.startOdometer.toLocaleString()} km</p></div>
+                                <div class="bg-white p-2 rounded-lg border"><p class="text-xs text-gray-500">End Odometer</p><p class="font-semibold text-gray-800">${log.endOdometer.toLocaleString()} km</p></div>
+                                <div class="bg-white p-2 rounded-lg border"><p class="text-xs text-gray-500">Total Distance</p><p class="font-bold text-indigo-700">${log.totalDistance.toLocaleString()} km</p></div>
+
+                                <h5 class="col-span-full font-semibold text-gray-700 border-b pb-1 mt-2">Costs</h5>
+                                <div class="bg-white p-2 rounded-lg border"><p class="text-xs text-gray-500">Fuel Purchased</p><p class="font-semibold text-red-600">- PKR ${(log.fuelCost || 0).toLocaleString()}</p></div>
+                                <div class="bg-white p-2 rounded-lg border"><p class="text-xs text-gray-500">Maintenance</p><p class="font-semibold text-red-600">- PKR ${(log.maintenanceCost || 0).toLocaleString()}</p></div>
+                                <div class="bg-white p-2 rounded-lg border"><p class="text-xs text-gray-500">Other Costs</p><p class="font-semibold text-red-600">- PKR ${(log.otherExpenses || 0).toLocaleString()}</p></div>
+                                <div class="bg-white p-2 rounded-lg border col-span-full md:col-span-1"><p class="text-xs text-gray-500">Daily Efficiency (if fueled)</p><p class="font-bold text-indigo-700">${dailyEfficiency}</p></div>
+                            </div>
+                            ${log.expenseNotes ? `<div class="mt-4 pt-2 border-t"><strong>Notes:</strong> ${log.expenseNotes}</div>` : ''}
+                        </div>
+                    `;
+                    
+                    div.querySelector('.edit-btn').addEventListener('click', (e) => { e.stopPropagation(); startEdit(id, log); });
+                    div.querySelector('.delete-btn').addEventListener('click', (e) => { e.stopPropagation(); showDeleteModal(id); });
+                    div.querySelector('.summary-row').addEventListener('click', () => { div.querySelector('.details-section').classList.toggle('show'); });
+                    
+                    return div;
+                }
+
+                saveLogBtn.addEventListener('click', handleSaveOrUpdate);
+                
+                dateFilter.addEventListener('change', renderFilteredData);
+                driverFilter.addEventListener('change', renderFilteredData);
+
+                authenticateUser().then(() => {
+                    auth.onAuthStateChanged(user => { 
+                        if(user) { listenForLogs(); }
+                    });
+                });
+            }
+
+            // Start the application
+            init();
+        });
+    </script>
+</body>
+</html>
+

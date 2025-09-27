@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Fleet Ride-Hailing Calculator - Karachi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .result-card {
+            transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+            transform: translateY(20px);
+            opacity: 0;
+        }
+        .result-card.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        .tab-button.active {
+            background-color: #1D4ED8;
+            color: white;
+        }
+        .car-profile {
+            border-left: 3px solid #3B82F6;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-blue-800">Advanced Fleet Ride-Hailing Calculator</h1>
+            <p class="text-gray-600 mt-2">Analyze fleet profitability, compare scenarios, and project long-term growth for your business in Karachi.</p>
+            <p class="text-xs text-gray-500 mt-2">Calculations based on market conditions as of: Saturday, September 27, 2025.</p>
+        </header>
+
+        <main class="bg-white p-6 rounded-2xl shadow-lg">
+            
+            <!-- Global Settings -->
+            <div>
+                 <h3 class="text-xl font-semibold mb-4 text-gray-800">Global Settings</h3>
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6 bg-gray-50 p-4 rounded-lg">
+                     <div>
+                         <label for="fuelPrice" class="block text-sm font-medium text-gray-700">Fuel Price (PKR per Liter/Kg)</label>
+                         <input type="number" id="fuelPrice" value="264.6" class="mt-1 block w-full bg-white border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2">
+                     </div>
+                     <div>
+                        <label for="drivingHours" class="block text-sm font-medium text-gray-700">Daily Driving Hours (per car)</label>
+                        <input type="number" id="drivingHours" value="8" class="mt-1 block w-full bg-white border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2">
+                    </div>
+                 </div>
+            </div>
+            <hr class="my-8">
+
+            <div id="fleet-container">
+                <!-- Car Profile Template -->
+            </div>
+            
+            <div class="mt-6">
+                <button id="addCarProfileBtn" class="w-full bg-gray-200 text-gray-700 font-bold py-3 px-6 rounded-lg hover:bg-gray-300 transition duration-300 shadow-sm">
+                    + Add Another Car Profile
+                </button>
+            </div>
+
+            <hr class="my-8">
+            
+            <!-- Fleet Overhead Costs -->
+            <div>
+                 <h3 class="text-xl font-semibold mb-4 text-gray-800">Fleet Overhead Costs</h3>
+                 <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6 bg-gray-50 p-4 rounded-lg">
+                     <div>
+                         <label for="supervisorSalary" class="block text-sm font-medium text-gray-700">Supervisor/Manager Salary (Monthly)</label>
+                         <input type="number" id="supervisorSalary" value="0" class="mt-1 block w-full bg-white border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2">
+                     </div>
+                     <div>
+                         <label for="officeRent" class="block text-sm font-medium text-gray-700">Office/Parking Rent (Monthly)</label>
+                         <input type="number" id="officeRent" value="0" class="mt-1 block w-full bg-white border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2">
+                     </div>
+                     <div>
+                         <label for="miscOverhead" class="block text-sm font-medium text-gray-700">Miscellaneous Overheads (Monthly)</label>
+                         <input type="number" id="miscOverhead" value="0" class="mt-1 block w-full bg-white border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2">
+                     </div>
+                 </div>
+            </div>
+
+
+            <div class="mt-8 flex flex-col sm:flex-row justify-center items-center gap-4">
+                <button id="calculateBtn" class="bg-blue-700 text-white font-bold py-3 px-8 rounded-lg hover:bg-blue-800 transition duration-300 shadow-md w-full sm:w-auto">Calculate Fleet Profitability</button>
+                <button id="saveScenarioBtn" class="bg-green-600 text-white font-bold py-3 px-8 rounded-lg hover:bg-green-700 transition duration-300 shadow-md w-full sm:w-auto">Save Fleet Scenario</button>
+            </div>
+        </main>
+
+        <!-- Results Section -->
+        <div id="results" class="mt-8 space-y-8"></div>
+
+        <!-- Maintenance Info Modal -->
+        <div id="maintenanceModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50 flex items-center justify-center">
+            <div class="relative mx-auto p-5 border w-full max-w-md shadow-lg rounded-2xl bg-white">
+                <div class="mt-3 text-center">
+                    <h3 class="text-xl leading-6 font-bold text-gray-900 mb-4">Maintenance Cost Breakdown</h3>
+                    <div class="mt-2 px-2 py-3">
+                        <p class="text-sm text-gray-600 text-left mb-4">
+                            This estimate assumes heavy commercial use (approx. <strong>4,500 km/month</strong>). Costs are prorated based on typical service intervals.
+                        </p>
+                        <ul class="text-left mt-4 space-y-4 text-gray-800 text-sm">
+                            <li class="border-b pb-2">
+                                <div class="flex justify-between">
+                                    <span>🔧 Engine Oil & Filter</span> <span class="font-semibold">~3,375 PKR</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Calculation: (4,500km driven / 6,000km interval) × 4,500 PKR cost</p>
+                            </li>
+                            <li class="border-b pb-2">
+                                <div class="flex justify-between">
+                                    <span>💨 Air Filter</span> <span class="font-semibold">~338 PKR</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Calculation: (4,500km driven / 20,000km interval) × 1,500 PKR cost</p>
+                            </li>
+                             <li class="border-b pb-2">
+                                <div class="flex justify-between">
+                                    <span>⚙️ Tuning & Labor</span> <span class="font-semibold">~2,250 PKR</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Calculation: (4,500km driven / 10,000km interval) × 5,000 PKR cost</p>
+                            </li>
+                             <li class="border-b pb-2">
+                                <div class="flex justify-between">
+                                    <span>🚗 Tires (Prorated)</span> <span class="font-semibold">~3,600 PKR</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Calculation: (4,500km driven / 50,000km lifespan) × 40,000 PKR cost</p>
+                            </li>
+                             <li class="border-b pb-2">
+                                <div class="flex justify-between">
+                                    <span>🛑 Brakes (Pads & Labor)</span> <span class="font-semibold">~750 PKR</span>
+                                </div>
+                                <p class="text-xs text-gray-500 mt-1">Calculation: (4,500km driven / 30,000km interval) × 5,000 PKR cost</p>
+                            </li>
+                            <li>
+                                <div class="flex justify-between">
+                                    <span>🔩 Other (Fluids, Belts)</span> <span class="font-semibold">~500 PKR</span>
+                                </div>
+                                 <p class="text-xs text-gray-500 mt-1">Fixed monthly estimate for minor upkeep.</p>
+                            </li>
+                        </ul>
+                        <p class="text-right mt-4 pt-3 border-t font-bold text-lg text-blue-800">Total: 10,813 PKR (rounded to ~11,000 PKR)</p>
+                    </div>
+                    <div class="items-center px-4 py-3">
+                        <button class="closeModalBtn px-4 py-2 bg-blue-700 text-white text-base font-medium rounded-lg w-full shadow-sm hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            Got it
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="text-center mt-12 text-sm text-gray-500">
+            <p>Disclaimer: This calculator provides an estimate for informational purposes only. Actual results may vary.</p>
+        </footer>
+
+    </div>
+
+    <script>
+        let profileCounter = 0;
+        const fleetContainer = document.getElementById('fleet-container');
+        const addCarProfileBtn = document.getElementById('addCarProfileBtn');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const saveScenarioBtn = document.getElementById('saveScenarioBtn');
+        const resultsDiv = document.getElementById('results');
+        const drivingHoursInput = document.getElementById('drivingHours');
+
+        // Baselines for calculation
+        const BASELINE_HOURS = 8;
+        const BASELINE_REVENUE = 4581;
+        const BASELINE_DISTANCE = 91;
+        const BASELINE_MAINTENANCE = 8190;
+        const BASELINE_WORKING_DAYS = 30;
+        
+        let savedScenarios = [];
+        let scenarioCounter = 1;
+
+        const createCarProfileHTML = (profileId) => {
+            return `
+                <div class="car-profile bg-white p-4 rounded-lg shadow-md mb-6" id="profile-${profileId}">
+                    <div class="flex justify-between items-center mb-4">
+                        <input type="text" id="profileName-${profileId}" value="Car Profile ${profileId}" class="text-xl font-semibold text-gray-800 bg-transparent focus:bg-gray-100 rounded p-1 w-2/3" placeholder="e.g., Suzuki Altos">
+                        <button class="remove-profile-btn text-red-500 hover:text-red-700 font-bold" data-id="${profileId}">&times; Remove</button>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+                        <div>
+                            <label for="carCount-${profileId}" class="block text-sm font-medium text-gray-700">Number of Cars in this Profile</label>
+                            <input type="number" id="carCount-${profileId}" value="1" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 car-input">
+                        </div>
+                        <div>
+                            <label for="carPrice-${profileId}" class="block text-sm font-medium text-gray-700">Vehicle Purchase Price (per car)</label>
+                            <input type="number" id="carPrice-${profileId}" value="2400000" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 car-input">
+                        </div>
+                        <div>
+                            <label for="initialCosts-${profileId}" class="block text-sm font-medium text-gray-700">Other Upfront Costs (per car)</label>
+                            <input type="number" id="initialCosts-${profileId}" value="0" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 car-input">
+                        </div>
+                        <div>
+                            <label for="fuelEfficiency-${profileId}" class="block text-sm font-medium text-gray-700">Fuel Efficiency (km per Liter/Kg)</label>
+                            <input type="number" id="fuelEfficiency-${profileId}" value="16" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm p-2 car-input">
+                        </div>
+                    </div>
+                     <hr class="my-6">
+                    <div>
+                        <h4 class="text-lg font-semibold mb-4 text-gray-700">Earning Model for this Profile</h4>
+                        <div class="flex rounded-lg shadow-sm" role="group">
+                            <button type="button" class="tab-button active profitShareTab py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-l-lg border border-gray-200 hover:bg-gray-100 w-1/2" data-id="${profileId}">Profit Sharing</button>
+                            <button type="button" class="tab-button fixedRentTab py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-r-lg border-t border-b border-r border-gray-200 hover:bg-gray-100 w-1/2" data-id="${profileId}">Fixed Rent</button>
+                        </div>
+
+                        <div class="profitShareInputs mt-4 space-y-4" id="profitShareInputs-${profileId}">
+                            <!-- Profit Sharing Inputs -->
+                            <div>
+                                <label for="platformCommission-${profileId}" class="block text-sm font-medium text-gray-700">Platform Commission (%)</label>
+                                <input type="number" id="platformCommission-${profileId}" value="12" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input">
+                            </div>
+                            <div>
+                                <label for="dailyRevenue-${profileId}" class="block text-sm font-medium text-gray-700">Avg. Gross Daily Revenue</label>
+                                <input type="number" id="dailyRevenue-${profileId}" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input">
+                                <p class="text-xs text-gray-500 mt-1">Auto-populates from hours, but can be edited.</p>
+                            </div>
+                            <div>
+                                <label for="dailyDistance-${profileId}" class="block text-sm font-medium text-gray-700">Avg. Daily Distance (km)</label>
+                                <input type="number" id="dailyDistance-${profileId}" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input">
+                                 <p class="text-xs text-gray-500 mt-1">Auto-populates from hours, but can be edited.</p>
+                            </div>
+                            <div>
+                                <label for="ownerShare-${profileId}" class="block text-sm font-medium text-gray-700">Owner's Share of Profit (%)</label>
+                                <input type="number" id="ownerShare-${profileId}" value="60" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Who pays for maintenance?</label>
+                                <div class="mt-2 flex space-x-4">
+                                    <input type="radio" id="ownerPays-${profileId}" name="maintenancePayer-${profileId}" value="owner" checked class="car-input"><label for="ownerPays-${profileId}" class="ml-2">Owner</label>
+                                    <input type="radio" id="driverPays-${profileId}" name="maintenancePayer-${profileId}" value="driver" class="car-input"><label for="driverPays-${profileId}" class="ml-2">Driver</label>
+                                    <input type="radio" id="splitPays-${profileId}" name="maintenancePayer-${profileId}" value="split" class="car-input"><label for="splitPays-${profileId}" class="ml-2">Split 50/50</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="fixedRentInputs mt-4 space-y-4 hidden" id="fixedRentInputs-${profileId}">
+                            <!-- Fixed Rent Inputs -->
+                            <div>
+                                <label for="dailyRent-${profileId}" class="block text-sm font-medium text-gray-700">Fixed Daily Rent (PKR)</label>
+                                <input type="number" id="dailyRent-${profileId}" value="1200" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input">
+                            </div>
+                             <div>
+                                <label class="block text-sm font-medium text-gray-700">Who pays for maintenance?</label>
+                                <div class="mt-2 flex space-x-4">
+                                    <input type="radio" id="ownerPaysFixed-${profileId}" name="maintenancePayerFixed-${profileId}" value="owner" checked class="car-input"><label for="ownerPaysFixed-${profileId}" class="ml-2">Owner</label>
+                                    <input type="radio" id="driverPaysFixed-${profileId}" name="maintenancePayerFixed-${profileId}" value="driver" class="car-input"><label for="driverPaysFixed-${profileId}" class="ml-2">Driver</label>
+                                    <input type="radio" id="splitPaysFixed-${profileId}" name="maintenancePayerFixed-${profileId}" value="split" class="car-input"><label for="splitPaysFixed-${profileId}" class="ml-2">Split 50/50</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                     <hr class="my-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
+                        <div>
+                            <label for="monthlyMaintenance-${profileId}" class="block text-sm font-medium text-gray-700">Monthly Maintenance</label>
+                            <input type="number" id="monthlyMaintenance-${profileId}" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input">
+                            <p class="text-xs text-gray-500 mt-1">Auto-populates, but can be edited.</p>
+                        </div>
+                        <div>
+                            <label for="monthlyInsurance-${profileId}" class="block text-sm font-medium text-gray-700">Monthly Insurance</label>
+                            <input type="number" id="monthlyInsurance-${profileId}" value="0" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input">
+                        </div>
+                         <div>
+                            <label for="annualDepreciation-${profileId}" class="block text-sm font-medium text-gray-700">Annual Depreciation (%)</label>
+                            <input type="number" id="annualDepreciation-${profileId}" value="7" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input">
+                        </div>
+                    </div>
+                     <div>
+                        <label for="workingDays-${profileId}" class="block text-sm font-medium text-gray-700 mt-4">Working Days per Month</label>
+                        <input type="number" id="workingDays-${profileId}" value="30" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input">
+                    </div>
+                     <div class="mt-2 text-center">
+                         <span class="maintenanceInfoBtn text-sm text-blue-600 font-semibold cursor-pointer hover:underline">(Show Maintenance Breakdown)</span>
+                     </div>
+                </div>
+            `;
+        };
+
+        const updateProfileCalculations = (profileId) => {
+            const hours = parseFloat(drivingHoursInput.value) || 0;
+            const workingDaysInput = document.getElementById(`workingDays-${profileId}`);
+            const workingDays = parseFloat(workingDaysInput.value) || 0;
+
+            const revenueInput = document.getElementById(`dailyRevenue-${profileId}`);
+            const distanceInput = document.getElementById(`dailyDistance-${profileId}`);
+            const maintenanceInput = document.getElementById(`monthlyMaintenance-${profileId}`);
+
+            if (revenueInput && distanceInput && maintenanceInput) {
+                // Calculate and update Revenue & Distance
+                const newRevenue = (BASELINE_REVENUE / BASELINE_HOURS) * hours;
+                const newDistance = (BASELINE_DISTANCE / BASELINE_HOURS) * hours;
+                revenueInput.value = newRevenue.toFixed(0);
+                distanceInput.value = newDistance.toFixed(0);
+
+                // Calculate and update Maintenance
+                const hourlyMaintenanceRate = BASELINE_MAINTENANCE / (BASELINE_WORKING_DAYS * BASELINE_HOURS);
+                const newMaintenance = hourlyMaintenanceRate * hours * workingDays;
+                maintenanceInput.value = newMaintenance.toFixed(0);
+            }
+        };
+
+        const updateAllProfileCalculations = () => {
+            document.querySelectorAll('.car-profile').forEach(profileDiv => {
+                const id = profileDiv.id.split('-')[1];
+                updateProfileCalculations(id);
+            });
+        };
+
+        const addCarProfile = () => {
+            profileCounter++;
+            const profileHTML = createCarProfileHTML(profileCounter);
+            fleetContainer.insertAdjacentHTML('beforeend', profileHTML);
+            updateProfileCalculations(profileCounter);
+        };
+        
+        drivingHoursInput.addEventListener('input', updateAllProfileCalculations);
+
+        fleetContainer.addEventListener('click', (e) => {
+            const id = e.target.dataset.id;
+            if (e.target.classList.contains('remove-profile-btn')) {
+                document.getElementById(`profile-${id}`).remove();
+            }
+            if (e.target.classList.contains('profitShareTab')) {
+                e.target.classList.add('active');
+                document.querySelector(`.fixedRentTab[data-id='${id}']`).classList.remove('active');
+                document.getElementById(`profitShareInputs-${id}`).classList.remove('hidden');
+                document.getElementById(`fixedRentInputs-${id}`).classList.add('hidden');
+            }
+            if (e.target.classList.contains('fixedRentTab')) {
+                e.target.classList.add('active');
+                document.querySelector(`.profitShareTab[data-id='${id}']`).classList.remove('active');
+                document.getElementById(`fixedRentInputs-${id}`).classList.remove('hidden');
+                document.getElementById(`profitShareInputs-${id}`).classList.add('hidden');
+            }
+             if (e.target.classList.contains('maintenanceInfoBtn')) {
+                 document.getElementById('maintenanceModal').classList.remove('hidden');
+             }
+        });
+        
+        fleetContainer.addEventListener('input', (e) => {
+            if (e.target.id.startsWith('workingDays-')) {
+                const id = e.target.id.split('-')[1];
+                updateProfileCalculations(id);
+            }
+        });
+
+        document.querySelector('.closeModalBtn').addEventListener('click', () => {
+            document.getElementById('maintenanceModal').classList.add('hidden');
+        });
+
+        addCarProfileBtn.addEventListener('click', addCarProfile);
+
+        const getFleetInputs = () => {
+            const profiles = [];
+            document.querySelectorAll('.car-profile').forEach(profileDiv => {
+                const id = profileDiv.id.split('-')[1];
+                const model = document.querySelector(`.profitShareTab[data-id='${id}']`).classList.contains('active') ? 'profitShare' : 'fixedRent';
+                
+                const profile = {
+                    id,
+                    name: document.getElementById(`profileName-${id}`).value || `Profile ${id}`,
+                    model,
+                    carCount: parseFloat(document.getElementById(`carCount-${id}`).value) || 0,
+                    carPrice: parseFloat(document.getElementById(`carPrice-${id}`).value) || 0,
+                    initialCosts: parseFloat(document.getElementById(`initialCosts-${id}`).value) || 0,
+                    fuelEfficiency: parseFloat(document.getElementById(`fuelEfficiency-${id}`).value) || 1,
+                    monthlyMaintenance: parseFloat(document.getElementById(`monthlyMaintenance-${id}`).value) || 0,
+                    monthlyInsurance: parseFloat(document.getElementById(`monthlyInsurance-${id}`).value) || 0,
+                    workingDays: parseFloat(document.getElementById(`workingDays-${id}`).value) || 1,
+                    annualDepreciation: (parseFloat(document.getElementById(`annualDepreciation-${id}`).value) || 0) / 100,
+                    
+                    platformCommission: (parseFloat(document.getElementById(`platformCommission-${id}`).value) || 0) / 100,
+                    dailyRevenue: parseFloat(document.getElementById(`dailyRevenue-${id}`).value) || 0,
+                    dailyDistance: parseFloat(document.getElementById(`dailyDistance-${id}`).value) || 0,
+                    ownerShare: (parseFloat(document.getElementById(`ownerShare-${id}`).value) || 0) / 100,
+                    maintenancePayer: document.querySelector(`input[name='maintenancePayer-${id}']:checked`).value,
+                    dailyRent: parseFloat(document.getElementById(`dailyRent-${id}`).value) || 0,
+                    maintenancePayerFixed: document.querySelector(`input[name='maintenancePayerFixed-${id}']:checked`).value,
+                };
+                profiles.push(profile);
+            });
+
+            return {
+                profiles,
+                fuelPrice: parseFloat(document.getElementById('fuelPrice').value) || 0,
+                supervisorSalary: parseFloat(document.getElementById('supervisorSalary').value) || 0,
+                officeRent: parseFloat(document.getElementById('officeRent').value) || 0,
+                miscOverhead: parseFloat(document.getElementById('miscOverhead').value) || 0
+            };
+        };
+
+        const performFleetCalculation = () => {
+            const inputs = getFleetInputs();
+            let fleet = {
+                totalInvestment: 0,
+                totalMonthlyNetProfit: 0,
+                annualROI: 0,
+                totalCars: 0,
+                totalAnnualDepreciationValue: 0,
+                scenarioDetails: {
+                    avgModel: '',
+                    avgOwnerShare: 0,
+                    avgMaintenancePayer: '',
+                },
+                breakdown: {
+                    totalMonthlyRevenue: 0,
+                    totalMonthlyCommission: 0,
+                    totalMonthlyFuelCost: 0,
+                    totalMonthlyGrossProfit: 0,
+                    totalMonthlyOwnerShare: 0,
+                    totalMonthlyDriverShare: 0,
+                    totalMonthlyMaintenance: 0,
+                    ownerPortionMaintenance: 0,
+                    driverPortionMaintenance: 0,
+                    totalMonthlyInsurance: 0,
+                    totalMonthlyOverheads: 0,
+                },
+                dailyBreakdown: {
+                    totalDailyRevenue: 0,
+                    totalDailyCommission: 0,
+                    totalDailyFuelCost: 0,
+                    totalDailyGrossProfit: 0,
+                    totalDailyOwnerShare: 0,
+                    totalDailyDriverShare: 0,
+                    ownerPortionDailyMaintenance: 0,
+                    driverPortionDailyMaintenance: 0,
+                    totalDailyInsurance: 0,
+                    totalDailyOverheads: 0,
+                }
+            };
+            
+            const fuelPrice = inputs.fuelPrice; 
+            let totalProfitShareCars = 0;
+            let totalOwnerShareSum = 0;
+            let modelTypes = new Set();
+            let maintenancePayerTypes = new Set();
+            let totalWeightedWorkingDaysNumerator = 0;
+
+            inputs.profiles.forEach(p => {
+                const carCount = p.carCount;
+                fleet.totalCars += carCount;
+                totalWeightedWorkingDaysNumerator += p.workingDays * carCount;
+                fleet.totalInvestment += (p.carPrice + p.initialCosts) * carCount;
+                modelTypes.add(p.model === 'profitShare' ? 'Profit Share' : 'Fixed Rent');
+
+                const dailyMaintenanceCost = p.monthlyMaintenance / p.workingDays;
+                const dailyInsuranceCost = p.monthlyInsurance / p.workingDays;
+
+                let ownerDailyNetIncomePerCar = 0;
+                
+                fleet.breakdown.totalMonthlyMaintenance += p.monthlyMaintenance * carCount;
+                fleet.breakdown.totalMonthlyInsurance += p.monthlyInsurance * carCount;
+                
+                let dailyOwnerMaintenancePortion = 0;
+                let dailyDriverMaintenancePortion = 0;
+                let maintenancePayer = '';
+
+                if (p.model === 'profitShare') {
+                    totalProfitShareCars += carCount;
+                    totalOwnerShareSum += p.ownerShare * carCount;
+                    maintenancePayer = p.maintenancePayer;
+                    maintenancePayerTypes.add(p.maintenancePayer);
+                    const dailyCommission = p.dailyRevenue * p.platformCommission;
+                    const netDailyRevenue = p.dailyRevenue - dailyCommission;
+                    const dailyFuelCost = (p.dailyDistance / p.fuelEfficiency) * fuelPrice;
+                    const dailyGrossProfit = netDailyRevenue - dailyFuelCost;
+                    const ownerShareOfProfit = dailyGrossProfit * p.ownerShare;
+                    const driverShareOfProfit = dailyGrossProfit * (1 - p.ownerShare);
+
+                    fleet.breakdown.totalMonthlyRevenue += p.dailyRevenue * p.workingDays * carCount;
+                    fleet.breakdown.totalMonthlyCommission += dailyCommission * p.workingDays * carCount;
+                    fleet.breakdown.totalMonthlyFuelCost += dailyFuelCost * p.workingDays * carCount;
+                    fleet.breakdown.totalMonthlyGrossProfit += dailyGrossProfit * p.workingDays * carCount;
+                    fleet.breakdown.totalMonthlyOwnerShare += ownerShareOfProfit * p.workingDays * carCount;
+                    fleet.breakdown.totalMonthlyDriverShare += driverShareOfProfit * p.workingDays * carCount;
+                    fleet.dailyBreakdown.totalDailyRevenue += p.dailyRevenue * carCount;
+                    fleet.dailyBreakdown.totalDailyCommission += dailyCommission * carCount;
+                    fleet.dailyBreakdown.totalDailyFuelCost += dailyFuelCost * carCount;
+                    fleet.dailyBreakdown.totalDailyGrossProfit += dailyGrossProfit * carCount;
+                    fleet.dailyBreakdown.totalDailyOwnerShare += ownerShareOfProfit * carCount;
+                    fleet.dailyBreakdown.totalDailyDriverShare += driverShareOfProfit * carCount;
+                    
+                    switch (p.maintenancePayer) {
+                        case 'owner': dailyOwnerMaintenancePortion = dailyMaintenanceCost; break;
+                        case 'split': dailyOwnerMaintenancePortion = dailyMaintenanceCost / 2; break;
+                    }
+                    ownerDailyNetIncomePerCar = ownerShareOfProfit - dailyOwnerMaintenancePortion - dailyInsuranceCost;
+
+                } else { // fixedRent
+                    maintenancePayer = p.maintenancePayerFixed;
+                    maintenancePayerTypes.add(p.maintenancePayerFixed);
+                    const dailyRent = p.dailyRent;
+                    
+                    fleet.breakdown.totalMonthlyRevenue += dailyRent * p.workingDays * carCount;
+                    fleet.breakdown.totalMonthlyOwnerShare += dailyRent * p.workingDays * carCount;
+                    fleet.dailyBreakdown.totalDailyRevenue += dailyRent * carCount;
+                    fleet.dailyBreakdown.totalDailyOwnerShare += dailyRent * carCount;
+                    
+                    switch (p.maintenancePayerFixed) {
+                        case 'owner': dailyOwnerMaintenancePortion = dailyMaintenanceCost; break;
+                        case 'split': dailyOwnerMaintenancePortion = dailyMaintenanceCost / 2; break;
+                    }
+                    ownerDailyNetIncomePerCar = dailyRent - dailyOwnerMaintenancePortion - dailyInsuranceCost;
+                }
+                
+                switch (maintenancePayer) {
+                    case 'owner': dailyOwnerMaintenancePortion = dailyMaintenanceCost; break;
+                    case 'driver': dailyDriverMaintenancePortion = dailyMaintenanceCost; break;
+                    case 'split': 
+                        dailyOwnerMaintenancePortion = dailyMaintenanceCost / 2;
+                        dailyDriverMaintenancePortion = dailyMaintenanceCost / 2;
+                        break;
+                }
+                fleet.breakdown.ownerPortionMaintenance += dailyOwnerMaintenancePortion * p.workingDays * carCount;
+                fleet.breakdown.driverPortionMaintenance += dailyDriverMaintenancePortion * p.workingDays * carCount;
+                fleet.dailyBreakdown.ownerPortionDailyMaintenance += dailyOwnerMaintenancePortion * carCount;
+                fleet.dailyBreakdown.driverPortionDailyMaintenance += dailyDriverMaintenancePortion * carCount;
+                fleet.dailyBreakdown.totalDailyInsurance += dailyInsuranceCost * carCount;
+
+                fleet.totalMonthlyNetProfit += ownerDailyNetIncomePerCar * p.workingDays * carCount;
+                fleet.totalAnnualDepreciationValue += (p.carPrice * p.annualDepreciation) * carCount;
+            });
+            
+            if (modelTypes.size > 1) {
+                fleet.scenarioDetails.avgModel = 'Mixed';
+            } else if (modelTypes.size === 1) {
+                fleet.scenarioDetails.avgModel = Array.from(modelTypes)[0];
+            } else {
+                 fleet.scenarioDetails.avgModel = 'N/A';
+            }
+            fleet.scenarioDetails.avgOwnerShare = totalProfitShareCars > 0 ? (totalOwnerShareSum / totalProfitShareCars) * 100 : 0;
+
+            if (maintenancePayerTypes.size > 1) {
+                fleet.scenarioDetails.avgMaintenancePayer = 'Mixed';
+            } else if (maintenancePayerTypes.size === 1) {
+                const payer = Array.from(maintenancePayerTypes)[0];
+                fleet.scenarioDetails.avgMaintenancePayer = payer.charAt(0).toUpperCase() + payer.slice(1);
+            } else {
+                 fleet.scenarioDetails.avgMaintenancePayer = 'N/A';
+            }
+
+            const totalMonthlyOverhead = inputs.supervisorSalary + inputs.officeRent + inputs.miscOverhead;
+            fleet.totalMonthlyNetProfit -= totalMonthlyOverhead;
+            fleet.breakdown.totalMonthlyOverheads = totalMonthlyOverhead;
+
+            const weightedAvgWorkingDays = fleet.totalCars > 0 ? totalWeightedWorkingDaysNumerator / fleet.totalCars : 26;
+            fleet.dailyBreakdown.totalDailyOverheads = totalMonthlyOverhead / weightedAvgWorkingDays;
+            
+            if (fleet.totalInvestment > 0) {
+                const annualNetProfitBeforeDepreciation = fleet.totalMonthlyNetProfit * 12;
+                const annualNetProfitAfterDepreciation = annualNetProfitBeforeDepreciation - fleet.totalAnnualDepreciationValue;
+                fleet.annualROI = (annualNetProfitAfterDepreciation / fleet.totalInvestment) * 100;
+            } else {
+                fleet.annualROI = 0;
+            }
+
+            fleet.breakEvenMonths = isFinite(fleet.totalMonthlyNetProfit) && fleet.totalMonthlyNetProfit > 0 ? fleet.totalInvestment / fleet.totalMonthlyNetProfit : Infinity;
+
+            let longTermProjection = [];
+            let currentFleetValue = inputs.profiles.reduce((acc, p) => acc + (p.carPrice * p.carCount), 0);
+            let cumulativeProfit = 0;
+            const annualNetProfit = fleet.totalMonthlyNetProfit * 12;
+
+            for (let i = 1; i <= 5; i++) {
+                if (i > 1) {
+                    const initialFleetValue = inputs.profiles.reduce((acc, p) => acc + (p.carPrice * p.carCount), 0);
+                    if (initialFleetValue > 0) {
+                        const fleetWideDepreciationRate = fleet.totalAnnualDepreciationValue / initialFleetValue;
+                        currentFleetValue *= (1 - fleetWideDepreciationRate);
+                    }
+                } else {
+                     currentFleetValue -= fleet.totalAnnualDepreciationValue;
+                }
+
+                cumulativeProfit += annualNetProfit;
+                longTermProjection.push({
+                    year: i,
+                    annualNetProfit,
+                    cumulativeProfit,
+                    depreciatedValue: currentFleetValue,
+                    netPosition: cumulativeProfit - fleet.totalInvestment + currentFleetValue
+                });
+            }
+             return { ...fleet, longTermProjection };
+        };
+        
+        calculateBtn.addEventListener('click', () => {
+            const results = performFleetCalculation();
+            displayFleetResults(results);
+        });
+
+        saveScenarioBtn.addEventListener('click', () => {
+             const results = performFleetCalculation();
+             const scenario = {
+                id: scenarioCounter++,
+                cars: results.totalCars,
+                monthlyProfit: results.totalMonthlyNetProfit,
+                annualROI: results.annualROI,
+                breakEven: results.breakEvenMonths,
+                investment: results.totalInvestment,
+                details: results.scenarioDetails,
+                breakdown: results.breakdown
+            };
+            savedScenarios.push(scenario);
+            displayScenarioComparison();
+        });
+
+        resultsDiv.addEventListener('click', (e) => {
+            if (e.target) {
+                if (e.target.id === 'clearScenariosBtn') {
+                    savedScenarios = [];
+                    scenarioCounter = 1;
+                    displayScenarioComparison();
+                } else if (e.target.classList.contains('delete-scenario-btn')) {
+                    const idToDelete = parseInt(e.target.dataset.id, 10);
+                    savedScenarios = savedScenarios.filter(s => s.id !== idToDelete);
+                    displayScenarioComparison();
+                }
+            }
+        });
+        
+        function displayFleetResults(results) {
+            resultsDiv.innerHTML = '';
+            
+            const formatter = new Intl.NumberFormat('en-PK', {
+                style: 'currency',
+                currency: 'PKR',
+                minimumFractionDigits: 0,
+            });
+            const breakEvenYears = Math.floor(results.breakEvenMonths / 12);
+            const breakEvenRemainingMonths = Math.round(results.breakEvenMonths % 12);
+            const breakEvenText = isFinite(results.breakEvenMonths) && results.breakEvenMonths > 0 ? `${breakEvenYears} years and ${breakEvenRemainingMonths} months` : 'Never';
+            
+            const breakdown = results.breakdown;
+            const dailyBreakdown = results.dailyBreakdown;
+            const finalOwnerNetProfit = results.totalMonthlyNetProfit;
+            const finalDriverNetIncome = breakdown.totalMonthlyDriverShare - breakdown.driverPortionMaintenance;
+
+            const finalOwnerDailyNetProfit = dailyBreakdown.totalDailyOwnerShare - dailyBreakdown.ownerPortionDailyMaintenance - dailyBreakdown.totalDailyInsurance - dailyBreakdown.totalDailyOverheads;
+            const finalDriverDailyNetIncome = dailyBreakdown.totalDailyDriverShare - dailyBreakdown.driverPortionDailyMaintenance;
+
+            const summaryCard = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg result-card">
+                    <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">Fleet Profitability Summary</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6 text-center mb-8">
+                        <div class="bg-blue-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">Total Initial Investment</p>
+                            <p class="text-2xl font-semibold text-blue-900">${formatter.format(results.totalInvestment)}</p>
+                        </div>
+                        <div class="bg-purple-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">Annual ROI</p>
+                            <p class="text-2xl font-semibold text-purple-900">${results.annualROI.toFixed(1)}%</p>
+                        </div>
+                        <div class="bg-red-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">Fleet Break-Even Time</p>
+                            <p class="text-2xl font-semibold text-red-900">${breakEvenText}</p>
+                        </div>
+                         <div class="bg-green-50 p-4 rounded-lg">
+                            <p class="text-sm text-gray-600">Total Monthly Net Profit</p>
+                            <p class="text-2xl font-bold text-green-800">${formatter.format(finalOwnerNetProfit)}</p>
+                        </div>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-center text-gray-800 mb-4">Monthly Financial Breakdown</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                        <div class="md:col-span-1 bg-gray-50 p-4 rounded-lg space-y-2">
+                            <h4 class="font-bold text-base text-gray-700 border-b pb-2 mb-2">Fleet Operations</h4>
+                            <div class="flex justify-between"><span>Gross Revenue:</span> <span>${formatter.format(breakdown.totalMonthlyRevenue)}</span></div>
+                            <div class="flex justify-between text-red-600"><span>(-) Commission:</span> <span>${formatter.format(breakdown.totalMonthlyCommission)}</span></div>
+                            <div class="flex justify-between text-red-600"><span>(-) Fuel Consumed:</span> <span>${formatter.format(breakdown.totalMonthlyFuelCost)}</span></div>
+                            <div class="flex justify-between font-bold border-t pt-2"><span>Gross Profit:</span> <span>${formatter.format(breakdown.totalMonthlyGrossProfit)}</span></div>
+                        </div>
+
+                        <div class="md:col-span-1 bg-blue-50 p-4 rounded-lg space-y-2">
+                            <h4 class="font-bold text-base text-blue-800 border-b border-blue-200 pb-2 mb-2">Owner's Finances</h4>
+                            <div class="flex justify-between"><span>Share of Profit:</span> <span>${formatter.format(breakdown.totalMonthlyOwnerShare)}</span></div>
+                            <div class="flex justify-between text-red-600"><span>(-) Maintenance:</span> <span>${formatter.format(breakdown.ownerPortionMaintenance)}</span></div>
+                            <div class="flex justify-between text-red-600"><span>(-) Insurance:</span> <span>${formatter.format(breakdown.totalMonthlyInsurance)}</span></div>
+                            <div class="flex justify-between text-red-600"><span>(-) Overheads:</span> <span>${formatter.format(breakdown.totalMonthlyOverheads)}</span></div>
+                            <div class="flex justify-between font-bold text-blue-900 border-t border-blue-200 pt-2"><span>Final Net Profit:</span> <span>${formatter.format(finalOwnerNetProfit)}</span></div>
+                        </div>
+
+                        <div class="md:col-span-1 bg-green-50 p-4 rounded-lg space-y-2">
+                             <h4 class="font-bold text-base text-green-800 border-b border-green-200 pb-2 mb-2">Driver(s) Finances</h4>
+                            <div class="flex justify-between"><span>Share of Profit:</span> <span>${formatter.format(breakdown.totalMonthlyDriverShare)}</span></div>
+                            <div class="flex justify-between text-red-600"><span>(-) Maintenance:</span> <span>${formatter.format(breakdown.driverPortionMaintenance)}</span></div>
+                            <div class="flex justify-between font-bold text-green-900 border-t border-green-200 pt-2"><span>Est. Net Income:</span> <span>${formatter.format(finalDriverNetIncome)}</span></div>
+                            <p class="text-xs text-gray-500 pt-2">Note: Fixed rent drivers' income is not included here as their revenue is variable.</p>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold text-center text-gray-800 mt-8 mb-4">Daily Financial Breakdown (Fleet Average)</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+                        <div class="md:col-span-1 bg-gray-50 p-4 rounded-lg space-y-2">
+                            <h4 class="font-bold text-base text-gray-700 border-b pb-2 mb-2">Fleet Operations</h4>
+                            <div class="flex justify-between"><span>Gross Revenue:</span> <span>${formatter.format(dailyBreakdown.totalDailyRevenue)}</span></div>
+                            <div class="flex justify-between text-red-600"><span>(-) Commission:</span> <span>${formatter.format(dailyBreakdown.totalDailyCommission)}</span></div>
+                            <div class="flex justify-between text-red-600"><span>(-) Fuel Consumed:</span> <span>${formatter.format(dailyBreakdown.totalDailyFuelCost)}</span></div>
+                            <div class="flex justify-between font-bold border-t pt-2"><span>Gross Profit:</span> <span>${formatter.format(dailyBreakdown.totalDailyGrossProfit)}</span></div>
+                        </div>
+
+                        <div class="md:col-span-1 bg-blue-50 p-4 rounded-lg space-y-2">
+                             <h4 class="font-bold text-base text-blue-800 border-b border-blue-200 pb-2 mb-2">Owner's Finances</h4>
+                            <div class="flex justify-between"><span>Share of Profit:</span> <span>${formatter.format(dailyBreakdown.totalDailyOwnerShare)}</span></div>
+                            <div class="flex justify-between text-red-600"><span>(-) Maintenance:</span> <span>${formatter.format(dailyBreakdown.ownerPortionDailyMaintenance)}</span></div>
+                            <div class="flex justify-between text-red-600"><span>(-) Insurance:</span> <span>${formatter.format(dailyBreakdown.totalDailyInsurance)}</span></div>
+                            <div class="flex justify-between text-red-600"><span>(-) Overheads:</span> <span>${formatter.format(dailyBreakdown.totalDailyOverheads)}</span></div>
+                            <div class="flex justify-between font-bold text-blue-900 border-t border-blue-200 pt-2"><span>Final Net Profit:</span> <span>${formatter.format(finalOwnerDailyNetProfit)}</span></div>
+                        </div>
+
+                        <div class="md:col-span-1 bg-green-50 p-4 rounded-lg space-y-2">
+                            <h4 class="font-bold text-base text-green-800 border-b border-green-200 pb-2 mb-2">Driver(s) Finances</h4>
+                            <div class="flex justify-between"><span>Share of Profit:</span> <span>${formatter.format(dailyBreakdown.totalDailyDriverShare)}</span></div>
+                            <div class="flex justify-between text-red-600"><span>(-) Maintenance:</span> <span>${formatter.format(dailyBreakdown.driverPortionDailyMaintenance)}</span></div>
+                            <div class="flex justify-between font-bold text-green-900 border-t border-green-200 pt-2"><span>Est. Net Income:</span> <span>${formatter.format(finalDriverDailyNetIncome)}</span></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const projectionCard = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg result-card">
+                    <h2 class="text-2xl font-bold text-center text-blue-800 mb-6">5-Year Fleet Investment Projection</h2>
+                     <div class="overflow-x-auto">
+                         <table class="w-full text-sm text-left text-gray-500">
+                             <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                                 <tr>
+                                     <th class="px-6 py-3 rounded-l-lg">Year</th>
+                                     <th class="px-6 py-3 text-right">Annual Profit</th>
+                                     <th class="px-6 py-3 text-right">Cumulative Profit</th>
+                                     <th class="px-6 py-3 text-right">Fleet's Value</th>
+                                     <th class="px-6 py-3 text-right rounded-r-lg">Total Net Position</th>
+                                 </tr>
+                             </thead>
+                             <tbody>
+                                 ${results.longTermProjection.map(row => `
+                                     <tr class="bg-white border-b">
+                                         <td class="px-6 py-4 font-medium">${row.year}</td>
+                                         <td class="px-6 py-4 text-right text-green-600">${formatter.format(row.annualNetProfit)}</td>
+                                         <td class="px-6 py-4 text-right">${formatter.format(row.cumulativeProfit)}</td>
+                                         <td class="px-6 py-4 text-right text-red-600">${formatter.format(row.depreciatedValue)}</td>
+                                         <td class="px-6 py-4 text-right font-bold ${row.netPosition > 0 ? 'text-blue-800' : 'text-red-800'}">${formatter.format(row.netPosition)}</td>
+                                     </tr>
+                                 `).join('')}
+                             </tbody>
+                         </table>
+                     </div>
+                </div>
+            `;
+
+            const scenarioContainer = `<div id="scenarioComparison" class="result-card"></div>`;
+
+            resultsDiv.innerHTML = summaryCard + projectionCard + scenarioContainer;
+            displayScenarioComparison();
+            
+            setTimeout(() => {
+                document.querySelectorAll('.result-card').forEach((card, index) => {
+                    setTimeout(() => card.classList.add('show'), index * 150);
+                });
+            }, 100);
+        }
+
+         function displayScenarioComparison() {
+            const container = document.getElementById('scenarioComparison');
+            if (!container || savedScenarios.length === 0) {
+                 if(container) container.innerHTML = '';
+                return;
+            }
+            const formatter = new Intl.NumberFormat('en-PK', { style: 'currency', currency: 'PKR', minimumFractionDigits: 0 });
+            const breakEvenText = (be) => isFinite(be) && be > 0 ? `${Math.floor(be / 12)}y ${Math.round(be % 12)}m` : 'Never';
+
+            container.innerHTML = `
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                     <div class="flex justify-between items-center mb-6">
+                         <h2 class="text-2xl font-bold text-blue-800">Scenario Comparison</h2>
+                         <button id="clearScenariosBtn" class="bg-red-500 text-white text-xs font-bold py-2 px-3 rounded-lg hover:bg-red-600">&times; Clear</button>
+                     </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                                <tr>
+                                    <th class="px-4 py-3 rounded-l-lg text-left">Scenario</th>
+                                    <th class="px-4 py-3 text-center"># Cars</th>
+                                    <th class="px-4 py-3 text-center">Model</th>
+                                    <th class="px-4 py-3 text-center">Owner Share</th>
+                                    <th class="px-4 py-3 text-center">Maint. Payer</th>
+                                    <th class="px-4 py-3 text-right">Revenue</th>
+                                    <th class="px-4 py-3 text-right">Commission</th>
+                                    <th class="px-4 py-3 text-right">Fuel</th>
+                                    <th class="px-4 py-3 text-right">Owner Maint.</th>
+                                    <th class="px-4 py-3 text-right">Insurance</th>
+                                    <th class="px-4 py-3 text-right">Overheads</th>
+                                    <th class="px-4 py-3 text-right font-bold">Monthly Profit</th>
+                                    <th class="px-4 py-3 text-right font-bold">Annual ROI</th>
+                                    <th class="px-4 py-3 text-right">Break-Even</th>
+                                    <th class="px-4 py-3 text-right">Investment</th>
+                                    <th class="px-4 py-3 text-center rounded-r-lg">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${savedScenarios.map(s => {
+                                    return `
+                                    <tr class="border-b">
+                                        <td class="px-4 py-4 font-bold">#${s.id}</td>
+                                        <td class="px-4 py-4 text-center">${s.cars}</td>
+                                        <td class="px-4 py-4 text-center">${s.details.avgModel}</td>
+                                        <td class="px-4 py-4 text-center">${s.details.avgOwnerShare > 0 ? s.details.avgOwnerShare.toFixed(0) + '%' : 'N/A'}</td>
+                                        <td class="px-4 py-4 text-center">${s.details.avgMaintenancePayer}</td>
+                                        <td class="px-4 py-4 text-right">${formatter.format(s.breakdown.totalMonthlyRevenue)}</td>
+                                        <td class="px-4 py-4 text-right text-red-600">-${formatter.format(s.breakdown.totalMonthlyCommission)}</td>
+                                        <td class="px-4 py-4 text-right text-red-600">-${formatter.format(s.breakdown.totalMonthlyFuelCost)}</td>
+                                        <td class="px-4 py-4 text-right text-red-600">-${formatter.format(s.breakdown.ownerPortionMaintenance)}</td>
+                                        <td class="px-4 py-4 text-right text-red-600">-${formatter.format(s.breakdown.totalMonthlyInsurance)}</td>
+                                        <td class="px-4 py-4 text-right text-red-600">-${formatter.format(s.breakdown.totalMonthlyOverheads)}</td>
+                                        <td class="px-4 py-4 text-right font-bold text-green-700">${formatter.format(s.monthlyProfit)}</td>
+                                        <td class="px-4 py-4 text-right font-bold text-purple-700">${s.annualROI.toFixed(1)}%</td>
+                                        <td class="px-4 py-4 text-right">${breakEvenText(s.breakEven)}</td>
+                                        <td class="px-4 py-4 text-right">${formatter.format(s.investment)}</td>
+                                        <td class="px-4 py-4 text-center">
+                                            <button class="delete-scenario-btn text-red-500 hover:text-red-700 font-bold px-2" data-id="${s.id}">&times;</button>
+                                        </td>
+                                    </tr>
+                                `}).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+            container.classList.add('show');
+        }
+        
+        // Initialize with one car profile
+        addCarProfile();
+    </script>
+</body>
+</html>
+

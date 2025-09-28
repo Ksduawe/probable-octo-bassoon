@@ -35,7 +35,7 @@
         <header class="text-center mb-8">
             <h1 class="text-3xl md:text-4xl font-bold text-blue-800">Advanced Fleet Ride-Hailing Calculator</h1>
             <p class="text-gray-600 mt-2">Analyze fleet profitability, compare scenarios, and project long-term growth for your business in Karachi.</p>
-            <p class="text-xs text-gray-500 mt-2">Calculations based on market conditions as of: Saturday, September 27, 2025.</p>
+            <p class="text-xs text-gray-500 mt-2">Calculations based on market conditions as of: Sunday, September 28, 2025.</p>
         </header>
 
         <main class="bg-white p-6 rounded-2xl shadow-lg">
@@ -170,7 +170,7 @@
         const resultsDiv = document.getElementById('results');
         const drivingHoursInput = document.getElementById('drivingHours');
 
-        // Baselines for calculation
+        // Global baselines for a new profile
         const BASELINE_HOURS = 8;
         const BASELINE_REVENUE = 4581;
         const BASELINE_DISTANCE = 91;
@@ -182,7 +182,11 @@
 
         const createCarProfileHTML = (profileId) => {
             return `
-                <div class="car-profile bg-white p-4 rounded-lg shadow-md mb-6" id="profile-${profileId}">
+                <div class="car-profile bg-white p-4 rounded-lg shadow-md mb-6" id="profile-${profileId}"
+                     data-baseline-revenue="${BASELINE_REVENUE}"
+                     data-baseline-distance="${BASELINE_DISTANCE}"
+                     data-baseline-maintenance="${BASELINE_MAINTENANCE}"
+                >
                     <div class="flex justify-between items-center mb-4">
                         <input type="text" id="profileName-${profileId}" value="Car Profile ${profileId}" class="text-xl font-semibold text-gray-800 bg-transparent focus:bg-gray-100 rounded p-1 w-2/3" placeholder="e.g., Suzuki Altos">
                         <button class="remove-profile-btn text-red-500 hover:text-red-700 font-bold" data-id="${profileId}">&times; Remove</button>
@@ -221,12 +225,12 @@
                             </div>
                             <div>
                                 <label for="dailyRevenue-${profileId}" class="block text-sm font-medium text-gray-700">Avg. Gross Daily Revenue</label>
-                                <input type="number" id="dailyRevenue-${profileId}" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input">
+                                <input type="number" id="dailyRevenue-${profileId}" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input baseline-source">
                                 <p class="text-xs text-gray-500 mt-1">Auto-populates from hours, but can be edited.</p>
                             </div>
                             <div>
                                 <label for="dailyDistance-${profileId}" class="block text-sm font-medium text-gray-700">Avg. Daily Distance (km)</label>
-                                <input type="number" id="dailyDistance-${profileId}" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input">
+                                <input type="number" id="dailyDistance-${profileId}" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input baseline-source">
                                  <p class="text-xs text-gray-500 mt-1">Auto-populates from hours, but can be edited.</p>
                             </div>
                             <div>
@@ -263,7 +267,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-x-8 gap-y-6">
                         <div>
                             <label for="monthlyMaintenance-${profileId}" class="block text-sm font-medium text-gray-700">Monthly Maintenance</label>
-                            <input type="number" id="monthlyMaintenance-${profileId}" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input">
+                            <input type="number" id="monthlyMaintenance-${profileId}" class="mt-1 block w-full bg-gray-50 border-gray-300 rounded-md shadow-sm p-2 car-input baseline-source">
                             <p class="text-xs text-gray-500 mt-1">Auto-populates, but can be edited.</p>
                         </div>
                         <div>
@@ -287,6 +291,13 @@
         };
 
         const updateProfileCalculations = (profileId) => {
+            const carProfileDiv = document.getElementById(`profile-${profileId}`);
+            if (!carProfileDiv) return;
+
+            const baselineRevenue = parseFloat(carProfileDiv.dataset.baselineRevenue);
+            const baselineDistance = parseFloat(carProfileDiv.dataset.baselineDistance);
+            const baselineMaintenance = parseFloat(carProfileDiv.dataset.baselineMaintenance);
+            
             const hours = parseFloat(drivingHoursInput.value) || 0;
             const workingDaysInput = document.getElementById(`workingDays-${profileId}`);
             const workingDays = parseFloat(workingDaysInput.value) || 0;
@@ -296,14 +307,12 @@
             const maintenanceInput = document.getElementById(`monthlyMaintenance-${profileId}`);
 
             if (revenueInput && distanceInput && maintenanceInput) {
-                // Calculate and update Revenue & Distance
-                const newRevenue = (BASELINE_REVENUE / BASELINE_HOURS) * hours;
-                const newDistance = (BASELINE_DISTANCE / BASELINE_HOURS) * hours;
+                const newRevenue = (baselineRevenue / BASELINE_HOURS) * hours;
+                const newDistance = (baselineDistance / BASELINE_HOURS) * hours;
                 revenueInput.value = newRevenue.toFixed(0);
                 distanceInput.value = newDistance.toFixed(0);
 
-                // Calculate and update Maintenance
-                const hourlyMaintenanceRate = BASELINE_MAINTENANCE / (BASELINE_WORKING_DAYS * BASELINE_HOURS);
+                const hourlyMaintenanceRate = baselineMaintenance / (BASELINE_WORKING_DAYS * BASELINE_HOURS);
                 const newMaintenance = hourlyMaintenanceRate * hours * workingDays;
                 maintenanceInput.value = newMaintenance.toFixed(0);
             }
@@ -351,6 +360,18 @@
             if (e.target.id.startsWith('workingDays-')) {
                 const id = e.target.id.split('-')[1];
                 updateProfileCalculations(id);
+            }
+
+            // Logic to update baselines if edited at 8 hours
+            if (e.target.classList.contains('baseline-source') && parseFloat(drivingHoursInput.value) === BASELINE_HOURS) {
+                const carProfileDiv = e.target.closest('.car-profile');
+                if (e.target.id.startsWith('dailyRevenue-')) {
+                    carProfileDiv.dataset.baselineRevenue = e.target.value;
+                } else if (e.target.id.startsWith('dailyDistance-')) {
+                    carProfileDiv.dataset.baselineDistance = e.target.value;
+                } else if (e.target.id.startsWith('monthlyMaintenance-')) {
+                    carProfileDiv.dataset.baselineMaintenance = e.target.value;
+                }
             }
         });
 
